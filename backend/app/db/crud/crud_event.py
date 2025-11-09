@@ -1,0 +1,12 @@
+from sqlalchemy.orm import Session
+from ..models.event import Event
+
+def create_event(db: Session, type_: str, payload: dict):
+    ev = Event(type=type_, payload=payload)
+    db.add(ev)
+    db.commit()
+    db.refresh(ev)
+    return ev
+
+def list_events(db: Session, limit: int = 100):
+    return db.query(Event).order_by(Event.created_at.desc()).limit(limit).all()

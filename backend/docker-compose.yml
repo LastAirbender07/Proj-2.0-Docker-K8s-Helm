@@ -1,0 +1,82 @@
+version: "3.8"
+
+services:
+  postgres-service:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: notifications
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app-network
+
+  redis-service:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app-network
+
+  backend:
+    build: .
+    env_file:
+      - .env
+    depends_on:
+      postgres-service:
+        condition: service_healthy
+      redis-service:
+        condition: service_healthy
+    ports:
+      - "5001:5001"
+    command: ["/app/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5001"]
+    volumes:
+      - ./app:/app/app:ro
+    networks:
+      - app-network
+
+  worker:
+    build: .
+    env_file:
+      - .env
+    depends_on:
+      postgres-service:
+        condition: service_healthy
+      redis-service:
+        condition: service_healthy
+    command: ["/app/.venv/bin/python", "-u", "-m", "app.workers.consumer"]
+    networks:
+      - app-network
+
+  scheduler:
+    build: .
+    env_file:
+      - .env
+    depends_on:
+      postgres-service:
+        condition: service_healthy
+      redis-service:
+        condition: service_healthy
+    command: ["/app/.venv/bin/python", "-u", "-m", "app.workers.producer"]
+    networks:
+      - app-network
+
+volumes:
+  pgdata:
+
+networks:
+  app-network:
+    driver: bridge
