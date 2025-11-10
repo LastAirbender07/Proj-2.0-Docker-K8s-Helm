@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from ..models.event import Event
+from backend.app.db.models.event import Event
 
 def create_event(db: Session, type_: str, payload: dict):
     ev = Event(type=type_, payload=payload)

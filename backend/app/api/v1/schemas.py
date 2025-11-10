@@ -11,8 +11,7 @@ class EventOut(BaseModel):
     payload: dict
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = { "from_attributes": True }
 
 class ReminderCreate(BaseModel):
     target_type: str
@@ -33,5 +32,4 @@ class ReminderOut(BaseModel):
     sent_at: datetime | None
     cancelled: bool
 
-    class Config:
-        orm_mode = True
+    model_config = { "from_attributes": True }

@@ -18,11 +18,12 @@ class Settings(BaseSettings):
     RQ_QUEUE: str = os.getenv("RQ_QUEUE", "default")
     RQ_RETRIES: int = int(os.getenv("RQ_RETRIES", 3))
 
-    # --- SMTP ---
+    # --- SMTP / Email ---
     SMTP_HOST: str | None = os.getenv("SMTP_HOST")
     SMTP_PORT: int | None = int(os.getenv("SMTP_PORT", 0)) or None
     SMTP_USER: str | None = os.getenv("SMTP_USER")
     SMTP_PASSWORD: str | None = os.getenv("SMTP_PASSWORD")
+    SMTP_USE_SSL: bool = os.getenv("SMTP_USE_SSL", "false").lower() == "true"
     FROM_EMAIL: str | None = os.getenv("FROM_EMAIL", "no-reply@example.com")
 
     # --- Computed properties ---
