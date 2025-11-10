@@ -16,10 +16,16 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-COPY . .
+# Copy only dependency files first for build cache efficiency
+COPY pyproject.toml uv.lock* ./
 
+# Install dependencies
 RUN uv sync --frozen --no-cache
+
+# Then copy rest of the app (improves layer cache)
+COPY . .
 
 EXPOSE 5001
 
-CMD ["/app/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5001"]
+# Default CMD
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5001"]
