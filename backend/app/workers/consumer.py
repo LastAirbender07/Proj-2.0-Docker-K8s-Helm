@@ -6,7 +6,6 @@ import time
 import logging
 from redis import Redis, RedisError
 from rq import Worker, Queue
-from rq.connections import Connection
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -38,10 +37,10 @@ def start_worker():
         logger.error("Redis connection unavailable. Worker exiting.")
         return
 
-    with Connection(redis_conn):
-        worker = Worker(map(Queue, listen))
-        logger.info("Worker started. Listening to queues: %s", listen)
-        worker.work()
+    queue = Queue(settings.RQ_QUEUE, connection=redis_conn)
+    worker = Worker([queue], connection=redis_conn)
+    logger.info("Worker started. Listening to queue: %s", settings.RQ_QUEUE)
+    worker.work(with_scheduler=True)
 
 
 if __name__ == "__main__":
