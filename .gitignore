@@ -1,1 +1,4 @@
-/backend/.env
+.env
+/backend/backend.egg-info
+/backend/build
+__pycache__
