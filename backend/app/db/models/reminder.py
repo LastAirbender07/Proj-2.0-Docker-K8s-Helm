@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, func
-from backend.app.db.session import Base
+from app.db.session import Base
 
 class Reminder(Base):
     __tablename__ = "reminders"

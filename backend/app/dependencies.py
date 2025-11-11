@@ -1,4 +1,4 @@
-from backend.app.db.session import SessionLocal
+from app.db.session import SessionLocal
 from contextlib import contextmanager
 
 def get_db():

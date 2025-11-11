@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 import logging
 
-from backend.app.api.v1.schemas import ReminderCreate, ReminderOut
-from backend.app.dependencies import get_db
-from backend.app.db.crud.crud_reminder import create_reminder, cancel_reminder
-from backend.app.workers.producer import schedule_reminder_job
+from app.api.v1.schemas import ReminderCreate, ReminderOut
+from app.dependencies import get_db
+from app.db.crud.crud_reminder import create_reminder, cancel_reminder
+from app.workers.producer import schedule_reminder_job
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from backend.app.db.models.reminder import Reminder
+from app.db.models.reminder import Reminder
 from datetime import datetime
 
 def create_reminder(db: Session, *, target_type: str, target_identifier: str, target_date: datetime,

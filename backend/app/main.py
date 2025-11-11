@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.app.api.v1.routes import events, notifications
-from backend.app.db.session import engine
-from backend.app.core.config import settings
+from app.api.v1.routes import events, notifications
+from app.db.session import engine
+from app.core.config import settings
 import subprocess
 import logging
 

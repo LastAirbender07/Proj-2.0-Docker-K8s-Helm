@@ -6,11 +6,11 @@ from rq_scheduler import Scheduler
 import logging
 import time
 
-from backend.app.core.config import settings
-from backend.app.db.session import SessionLocal
-from backend.app.db.crud.crud_reminder import get_reminder, mark_sent
-from backend.app.utils.email_utils import send_email
-from backend.app.utils.sms_utils import send_sms
+from app.core.config import settings
+from app.db.session import SessionLocal
+from app.db.crud.crud_reminder import get_reminder, mark_sent
+from app.utils.email_utils import send_email
+from app.utils.sms_utils import send_sms
 
 logger = logging.getLogger(__name__)
 

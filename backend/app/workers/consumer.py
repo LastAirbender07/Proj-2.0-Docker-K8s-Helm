@@ -5,8 +5,9 @@ Also RQ worker automatically handles retries if set.
 import time
 import logging
 from redis import Redis, RedisError
-from rq import Worker, Queue, Connection
-from backend.app.core.config import settings
+from rq import Worker, Queue
+from rq.connections import Connection
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 listen = [settings.RQ_QUEUE]
