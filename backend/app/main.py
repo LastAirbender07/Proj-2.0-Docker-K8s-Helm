@@ -1,23 +1,26 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.routes import events, notifications
 from app.core.config import settings
-import subprocess
+from alembic.config import Config
+from alembic import command
 import logging
 
 logger = logging.getLogger(__name__)
 
 def run_migrations():
     """
-    Run Alembic migrations automatically at app startup.
-    Ensures database schema is up-to-date across environments.
+    Run Alembic migrations programmatically.
+    Works inside Docker even if alembic CLI isn't on PATH.
     """
     try:
         logger.info("Running Alembic migrations...")
-        subprocess.run(["alembic", "upgrade", "head"], check=True)
+        alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "../../alembic.ini"))
+        command.upgrade(alembic_cfg, "head")
         logger.info("Migrations applied successfully.")
-    except subprocess.CalledProcessError as e:
-        logger.error("Failed to apply migrations: %s", e)
+    except Exception as e:
+        logger.error(f"Failed to apply migrations: {e}")
         raise
 
 app = FastAPI(title="Event Notification Service")
