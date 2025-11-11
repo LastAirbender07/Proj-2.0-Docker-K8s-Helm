@@ -15,18 +15,10 @@ from app.db.models.reminder import Reminder
 # access to the values within the .ini file in use.
 config = context.config
 
-# --- Dynamically set DB URL from environment ---
-POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
-POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "postgres")
-POSTGRES_DB: str = os.getenv("POSTGRES_DB", "notifications")
-POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "postgres-service")
-POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
+# --- Dynamically set DB URL ---
 
-DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL environment variable not set")
-
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
+from app.core.config import settings
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

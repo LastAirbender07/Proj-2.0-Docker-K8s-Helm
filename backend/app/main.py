@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.routes import events, notifications
-from app.db.session import engine
 from app.core.config import settings
 import subprocess
 import logging
@@ -27,7 +26,6 @@ app = FastAPI(title="Event Notification Service")
 origins = [
     "http://localhost:3000",
     "http://localhost:5173",
-    "http://task.local",
 ]
 app.add_middleware(
     CORSMiddleware,
