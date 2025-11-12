@@ -21,15 +21,21 @@ def run_migrations():
     Works inside Docker even if alembic CLI isn't on PATH.
     """
     try:
-        logger.info(f"Listing of /app: {os.listdir('/app')}")
         base_dir = os.path.dirname(__file__)
-        cfg_path = os.path.abspath(os.path.join(base_dir, "..", "alembic.ini"))
-
+        cfg_path = os.path.abspath(os.path.join(base_dir, "../..", "alembic.ini"))
         logger.info(f"🔍 Alembic config path resolved to: {cfg_path}")
         logger.info(f"Exists? {os.path.exists(cfg_path)}")
 
-        logger.info("Running Alembic migrations...")
         alembic_cfg = Config(cfg_path)
+        db_url = os.getenv("DATABASE_URL") or (
+            f"postgresql+psycopg2://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}"
+            f"@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{os.getenv('POSTGRES_DB')}"
+        )
+
+        logger.info(f"📦 Using DB URL: {db_url}")
+        alembic_cfg.set_main_option("sqlalchemy.url", db_url)
+
+        logger.info("🚀 Running Alembic migrations...")
         command.upgrade(alembic_cfg, "head")
         logger.info("✅ Migrations applied successfully.")
     except Exception as e:
