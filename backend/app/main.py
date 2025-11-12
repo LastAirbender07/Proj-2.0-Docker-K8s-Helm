@@ -22,7 +22,7 @@ def run_migrations():
     """
     try:
         base_dir = os.path.dirname(__file__)
-        cfg_path = os.path.abspath(os.path.join(base_dir, "../..", "alembic.ini"))
+        cfg_path = os.path.abspath(os.path.join(base_dir, "..", "alembic.ini"))
         logger.info(f"🔍 Alembic config path resolved to: {cfg_path}")
         logger.info(f"Exists? {os.path.exists(cfg_path)}")
 
