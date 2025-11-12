@@ -21,12 +21,14 @@ def run_migrations():
     Works inside Docker even if alembic CLI isn't on PATH.
     """
     try:
-        cfg_path = os.path.join(os.path.dirname(__file__), "../../alembic.ini")
-        logger.info(f"🔍 Alembic config path resolved to: {os.path.abspath(cfg_path)}")
+        base_dir = os.path.dirname(__file__)
+        cfg_path = os.path.abspath(os.path.join(base_dir, "../..", "alembic.ini"))
+
+        logger.info(f"🔍 Alembic config path resolved to: {cfg_path}")
         logger.info(f"Exists? {os.path.exists(cfg_path)}")
 
         logger.info("Running Alembic migrations...")
-        alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "../../alembic.ini"))
+        alembic_cfg = Config(cfg_path)
         command.upgrade(alembic_cfg, "head")
         logger.info("✅ Migrations applied successfully.")
     except Exception as e:
