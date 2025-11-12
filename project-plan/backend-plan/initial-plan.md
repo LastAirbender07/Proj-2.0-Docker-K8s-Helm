@@ -438,6 +438,11 @@ from email.message import EmailMessage
 from ..core.config import settings
 import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 logger = logging.getLogger(__name__)
 
 def send_email(to_email: str, subject: str, body: str):
@@ -461,6 +466,11 @@ def send_email(to_email: str, subject: str, body: str):
 
 ```python
 import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 logger = logging.getLogger(__name__)
 
 def send_sms(phone: str, message: str):
@@ -511,6 +521,11 @@ from ..db.crud.crud_reminder import get_reminder, mark_sent
 from ..utils.email_utils import send_email
 from ..utils.sms_utils import send_sms
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 logger = logging.getLogger(__name__)
 redis_conn = Redis.from_url(settings.REDIS_URL)
 q = Queue(settings.RQ_QUEUE, connection=redis_conn)

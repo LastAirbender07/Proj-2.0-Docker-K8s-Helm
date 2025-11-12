@@ -1,9 +1,15 @@
 import smtplib
+import sys
 from email.message import EmailMessage
 from app.core.config import settings
 import logging
 from contextlib import contextmanager
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 logger = logging.getLogger(__name__)
 
 

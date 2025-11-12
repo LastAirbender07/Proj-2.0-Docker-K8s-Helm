@@ -1,12 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 import logging
+import sys
 
 from app.api.v1.schemas import ReminderCreate, ReminderOut
 from app.dependencies import get_db
 from app.db.crud.crud_reminder import create_reminder, cancel_reminder
 from app.workers.producer import schedule_reminder_job
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/notifications", tags=["notifications"])

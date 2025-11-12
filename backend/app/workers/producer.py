@@ -5,6 +5,7 @@ from rq.job import Retry
 from rq_scheduler import Scheduler
 import logging
 import time
+import sys
 
 from app.core.config import settings
 from app.db.session import SessionLocal
@@ -12,6 +13,11 @@ from app.db.crud.crud_reminder import get_reminder, mark_sent
 from app.utils.email_utils import send_email
 from app.utils.sms_utils import send_sms
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 logger = logging.getLogger(__name__)
 
 def get_redis_connection(retries: int = 5, delay: int = 3) -> Redis | None:

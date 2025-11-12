@@ -1,4 +1,5 @@
 import os
+import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.routes import events, notifications
@@ -7,6 +8,11 @@ from alembic.config import Config
 from alembic import command
 import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 logger = logging.getLogger(__name__)
 
 def run_migrations():

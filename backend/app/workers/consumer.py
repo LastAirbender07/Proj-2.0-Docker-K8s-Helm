@@ -4,10 +4,16 @@ Also RQ worker automatically handles retries if set.
 """
 import time
 import logging
+import sys
 from redis import Redis, RedisError
 from rq import Worker, Queue
 from app.core.config import settings
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 logger = logging.getLogger(__name__)
 listen = [settings.RQ_QUEUE]
 
