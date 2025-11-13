@@ -7,6 +7,11 @@ from app.core.config import settings
 from alembic.config import Config
 from alembic import command
 import logging
+import time
+import psycopg2
+import glob
+from subprocess import run, CalledProcessError
+from psycopg2 import OperationalError
 
 logging.basicConfig(
     level=logging.INFO,
@@ -14,6 +19,23 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
+
+def wait_for_db():
+    db_url = settings.DATABASE_URL
+    max_retries = 10
+    retry_delay = 5  # seconds
+
+    for attempt in range(max_retries):
+        try:
+            conn = psycopg2.connect(db_url)
+            conn.close()
+            logger.info("Database is available.")
+            return
+        except OperationalError:
+            logger.warning(f"Database not available, retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+    logger.error("Could not connect to the database after several attempts.")
+    raise Exception("Database connection failed.")
 
 def run_migrations():
     """
@@ -26,21 +48,45 @@ def run_migrations():
         logger.info(f"🔍 Alembic config path resolved to: {cfg_path}")
         logger.info(f"Exists? {os.path.exists(cfg_path)}")
 
+        versions_dir = os.path.abspath(os.path.join(base_dir, "..", "alembic", "versions"))
+        os.makedirs(versions_dir, exist_ok=True)
+
         alembic_cfg = Config(cfg_path)
         db_url = os.getenv("DATABASE_URL") or (
             f"postgresql+psycopg2://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}"
             f"@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{os.getenv('POSTGRES_DB')}"
         )
-
         logger.info(f"📦 Using DB URL: {db_url}")
         alembic_cfg.set_main_option("sqlalchemy.url", db_url)
 
         logger.info("🚀 Running Alembic migrations...")
-        command.upgrade(alembic_cfg, "head")
-        logger.info("✅ Migrations applied successfully.")
+    #     command.upgrade(alembic_cfg, "head")
+    #     logger.info("✅ Migrations applied successfully.")
+    # except Exception as e:
+    #     logger.error(f"❌ Failed to apply migrations: {e}")
+    #     raise
+
+        try:
+            # Check if any migration file exists
+            alembic_bin = "/app/.venv/bin/alembic"
+            version_files = glob.glob(os.path.join(versions_dir, "*.py"))
+            if not version_files:
+                logger.info("🧱 No Alembic version found. Generating initial migration...")
+                run([alembic_bin, "-c", cfg_path, "revision", "--autogenerate", "-m", "initial schema"], check=True)
+            else:
+                logger.info("✅ Existing Alembic version detected, skipping generation.")
+
+            logger.info("🚀 Applying migrations...")
+            run([alembic_bin, "-c", cfg_path, "upgrade", "head"], check=True)
+            logger.info("✅ Migrations applied successfully.")
+
+        except CalledProcessError as e:
+            logger.error(f"❌ Alembic command failed: {e}")
+            raise
     except Exception as e:
         logger.error(f"❌ Failed to apply migrations: {e}")
         raise
+
 
 app = FastAPI(title="Event Notification Service")
 
@@ -64,6 +110,7 @@ app.include_router(notifications.router)
 # --- Startup Event: Run Migrations ---
 @app.on_event("startup")
 def startup_event():
+    wait_for_db()
     run_migrations()
 
 @app.get("/health")
