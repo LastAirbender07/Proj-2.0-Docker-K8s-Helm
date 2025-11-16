@@ -10,9 +10,11 @@ import sys
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.db.crud.crud_event import get_event
+from app.db.models.notification import StatusType
 from app.db.crud.crud_notification import get_notification, create_notification, mark_notification_sent
 from app.utils.email_utils import send_email
 from app.utils.sms_utils import send_sms
+from app.constants.types import NotificationEventType
 
 logging.basicConfig(
     level=logging.INFO,
@@ -71,16 +73,33 @@ def send_reminder_job(notification_id: int):
             logger.warning("Reminder %s not found", notification_id)
             return
 
-        if r.cancelled:
-            logger.info("Reminder %s cancelled, skipping", notification_id)
+        if r.status == StatusType.CANCELED:
+            logger.info("Reminder %s is cancelled, skipping.", notification_id)
             return
 
         if r.sent_at:
             logger.info("Reminder %s already sent at %s", notification_id, r.sent_at)
             return
 
-        subject = f"Reminder: {r.notification_type} for {r.entity_id}"
-        body = f"Your {r.notification_type} is due at {r.target_date}. Please take action."
+        dt = r.target_date or datetime.now(timezone.utc)
+        try:
+            when = dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M %Z")
+        except Exception:
+            when = str(dt)
+
+        subject = f"Reminder: {r.notification_type} for {r.entity_id} — due {when}"
+
+        body = (
+            f"Hello,\n\n"
+            f"This is a friendly reminder about your {r.notification_type.lower()} "
+            f"(notification #{r.id}) for {r.entity_id}. It is scheduled for {when}.\n\n"
+            "What you need to do:\n"
+            "- Review the item and take any required action.\n\n"
+            "If you’ve already completed this, please ignore this message.\n\n"
+            "If you need help or believe this is an error, reply to this email or check your account for details.\n\n"
+            "Thank you,\n"
+            "Support Team"
+        )
 
         if r.email:
             send_email(r.email, subject, body)
@@ -144,44 +163,123 @@ def enqueue_event_processing_job(event_id: int):
     redis, q, dlq, scheduler = get_scheduler_components()
     q.enqueue(process_event_job, event_id)
 
+
 def process_event_job(event_id: int):
     """
     Process an incoming event and create/schedule notifications.
+    Uses a handler-based approach for clarity and future extensibility.
     """
+
     db = SessionLocal()
+    try:
+        event = get_event(db, event_id)
+        if not event:
+            logger.warning("Event %s not found", event_id)
+            return
+        
+        try:
+            event_type: NotificationEventType = NotificationEventType(event.type)
+        except ValueError:
+            logger.warning(
+                "Unknown event type '%s' for event %s. Falling back to CUSTOM.", event.type, event_id)
+            event_type = NotificationEventType.CUSTOM
 
-    event = get_event(db, event_id)
-    if not event:
-        return
+        now_utc = datetime.now(timezone.utc)
 
-    # === Example business logic ===
-    if event.type == "user.signup":
-        n = create_notification(
+        def handle_user_signup(payload):
+            return {
+                "target_date": now_utc,
+                "lead_time_days": 0,
+                "entity_id": payload.get("user_id"),
+                "email": payload.get("email"),
+                "phone": None,  # No SMS
+            }
+
+        def handle_payment_failed(payload):
+            return {
+                "target_date": now_utc,
+                "lead_time_days": 0,
+                "entity_id": payload.get("user_id"),
+                "email": payload.get("email"),
+                "phone": None,
+            }
+
+        def handle_payment_success(payload):
+            return {
+                "target_date": now_utc,
+                "lead_time_days": 0,
+                "entity_id": payload.get("user_id"),
+                "email": payload.get("email"),
+                "phone": None,
+            }
+
+        def handle_password_expiry(payload):
+            return {
+                "target_date": payload.get("expiry_date"),  # must be UTC datetime
+                "lead_time_days": payload.get("lead_days", 7),
+                "entity_id": payload.get("user_id"),
+                "email": payload.get("email"),
+                "phone": None,
+            }
+
+        def handle_unsubscribe(payload):
+            return {
+                "target_date": now_utc,
+                "lead_time_days": 0,
+                "entity_id": payload.get("user_id"),
+                "email": payload.get("email"),
+                "phone": None,
+            }
+
+        def handle_custom(payload):
+            return {
+                "target_date": payload.get("target_date") or now_utc,
+                "lead_time_days": payload.get("lead_days", 0),
+                "entity_id": payload.get("entity_id"),
+                "email": payload.get("email"),
+                "phone": None,
+            }
+
+        handler_map = {
+            NotificationEventType.USER_SIGNUP: handle_user_signup,
+            NotificationEventType.PAYMENT_FAILED: handle_payment_failed,
+            NotificationEventType.PAYMEBT_SUCCESS: handle_payment_success,
+            NotificationEventType.PASSWORD_EXPIRY: handle_password_expiry,
+            NotificationEventType.USER_UNSUBSCRIBE: handle_unsubscribe,
+            NotificationEventType.CUSTOM: handle_custom,
+        }
+
+        handler = handler_map.get(event_type, handle_custom)
+        params = handler(event.payload or {})
+
+        # Create DB notification
+        notification = create_notification(
             db,
-            notification_type="welcome_email",
-            entity_id=event.payload.get("user_id"),
-            email=event.payload.get("email"),
-            phone=None,
-            target_date=None,        # immediate send
-            lead_time_days=0         # no lead time
+            notification_type=event_type.value,
+            entity_id=params["entity_id"],
+            email=params["email"],
+            phone=params["phone"],  # logged only
+            target_date=params["target_date"],
+            lead_time_days=params["lead_time_days"],
         )
-        schedule_notification_job(n.id, n.target_date, n.lead_time_days)
 
-    elif event.type == "payment.failed":
-        n = create_notification(
-            db,
-            notification_type="payment_failure",
-            entity_id=event.payload.get("user_id"),
-            email=event.payload.get("email"),
-            phone=None,
-            target_date=None,
-            lead_time_days=0
+        schedule_notification_job(
+            notification.id,
+            notification.target_date,
+            notification.lead_time_days,
         )
-        schedule_notification_job(n.id, n.target_date, n.lead_time_days)
 
-    # Add more event types as needed
+        logger.info(
+            "Notification %s created & scheduled for event %s (%s)",
+            notification.id,
+            event_id,
+            event_type.value,
+        )
 
-    db.close()
+    except Exception as e:
+        logger.exception("Error processing event %s: %s", event_id, e)
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":

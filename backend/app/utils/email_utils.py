@@ -10,6 +10,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,7 +37,9 @@ def smtp_connection():
         yield server
 
     except Exception as e:
-        logger.error(f"Error establishing SMTP connection: {e}")
+        logger.error(
+            f"Error establishing SMTP connection to {settings.SMTP_HOST}:{port}: {e}"
+        )
         raise
     finally:
         try:
@@ -45,7 +48,7 @@ def smtp_connection():
             pass
 
 
-def send_email(to_email: str, subject: str, body: str):
+def send_email(to_email: str, subject: str, body: str) -> None:
     """
     Send an email via configured SMTP.
     Falls back to logging the message if no SMTP is configured.
@@ -60,8 +63,11 @@ def send_email(to_email: str, subject: str, body: str):
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = getattr(settings, "FROM_EMAIL", settings.SMTP_USER or "no-reply@example.com")
-    msg["To"] = to_email
+    msg["To"] = ", ".join(to_email) if isinstance(to_email, list) else to_email
     msg.set_content(body)
+    msg.add_alternative(f"<p>{body}</p>", subtype="html")
+
+    logger.info("Sending email to %s - %s", to_email, subject)
 
     try:
         with smtp_connection() as server:

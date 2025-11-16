@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.db.models.notification import Notification
+from app.db.models.notification import Notification, StatusType
 from datetime import datetime
 
 def create_notification(db: Session, *, notification_type: str, entity_id: str, target_date: datetime,
@@ -24,7 +24,7 @@ def cancel_notification(db: Session, notification_id: int):
     r = get_notification(db, notification_id)
     if not r:
         return None
-    r.cancelled = True
+    r.status = StatusType.CANCELED 
     db.commit()
     db.refresh(r)
     return r

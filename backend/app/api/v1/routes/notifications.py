@@ -7,6 +7,7 @@ from app.api.v1.schemas import NotificationCreate, NotificationOut
 from app.dependencies import get_db
 from app.db.crud.crud_notification import create_notification, cancel_notification
 from app.workers.producer import schedule_notification_job
+from app.constants.types import NotificationEventType
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,10 +33,19 @@ def create_notification_endpoint(
     - Schedules background job asynchronously to avoid blocking HTTP request.
     - Logs scheduling failure but does not affect API response.
     """
+    try:
+        event_type = NotificationEventType(payload.notification_type)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid notification_type '{payload.notification_type}'. "
+                   f"Allowed values: {[e.value for e in NotificationEventType]}",
+        )
+    
     # Step 1: Create reminder entry in DB
     r = create_notification(
         db,
-        notification_type=payload.notification_type,
+        notification_type=event_type.value,
         entity_id=payload.entity_id,
         target_date=payload.target_date,
         lead_time_days=payload.lead_time_days,
@@ -43,15 +53,24 @@ def create_notification_endpoint(
         phone=payload.phone,
     )
 
-    # Step 2: Schedule asynchronously
-    def safe_schedule():
-        try:
-            schedule_notification_job(r.id, r.target_date, r.lead_time_days)
-            logger.info(f"Scheduled reminder job for ID={r.id}")
-        except Exception as e:
-            logger.error(f"Failed to schedule reminder job (ID={r.id}): {e}")
+    notification_id = r.id
+    target_date = r.target_date
+    lead_time = r.lead_time_days
 
-    background_tasks.add_task(safe_schedule)
+    # Step 2: Schedule asynchronously
+    def safe_schedule(notification_id, target_date, lead_time):
+        try:
+            schedule_notification_job(notification_id, target_date, lead_time)
+            logger.info(f"Scheduled notification job for ID={notification_id}")
+        except Exception as e:
+            logger.error(f"Failed to schedule job (ID={notification_id}): {e}")
+
+    background_tasks.add_task(
+        safe_schedule,
+        notification_id,
+        target_date,
+        lead_time
+    )
 
     return r
 

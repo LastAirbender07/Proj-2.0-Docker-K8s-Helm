@@ -16,7 +16,7 @@ def publish_event(payload: EventIn, db: Session = Depends(get_db)):
     Returns:
         EventOut
     """
-    ev = create_event(db, payload.type, payload.payload)
+    ev = create_event(db, payload.type.value, payload.payload)
     # Optionally enqueue notifications here
     enqueue_event_processing_job(ev.id)
     return ev
