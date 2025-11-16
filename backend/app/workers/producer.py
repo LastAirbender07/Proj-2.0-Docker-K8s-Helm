@@ -9,7 +9,8 @@ import sys
 
 from app.core.config import settings
 from app.db.session import SessionLocal
-from app.db.crud.crud_reminder import get_reminder, mark_sent
+from app.db.crud.crud_event import get_event
+from app.db.crud.crud_notification import get_notification, create_notification, mark_notification_sent
 from app.utils.email_utils import send_email
 from app.utils.sms_utils import send_sms
 
@@ -53,7 +54,7 @@ def get_scheduler_components():
     return redis_conn, q, dlq, scheduler
 
 
-def send_reminder_job(reminder_id: int):
+def send_reminder_job(notification_id: int):
     """
     Worker job: send reminder if valid and not already sent/cancelled.
 
@@ -65,39 +66,39 @@ def send_reminder_job(reminder_id: int):
     """
     db = SessionLocal()
     try:
-        r = get_reminder(db, reminder_id)
+        r = get_notification(db, notification_id)
         if not r:
-            logger.warning("Reminder %s not found", reminder_id)
+            logger.warning("Reminder %s not found", notification_id)
             return
 
         if r.cancelled:
-            logger.info("Reminder %s cancelled, skipping", reminder_id)
+            logger.info("Reminder %s cancelled, skipping", notification_id)
             return
 
         if r.sent_at:
-            logger.info("Reminder %s already sent at %s", reminder_id, r.sent_at)
+            logger.info("Reminder %s already sent at %s", notification_id, r.sent_at)
             return
 
-        subject = f"Reminder: {r.target_type} for {r.target_identifier}"
-        body = f"Your {r.target_type} is due at {r.target_date}. Please take action."
+        subject = f"Reminder: {r.notification_type} for {r.entity_id}"
+        body = f"Your {r.notification_type} is due at {r.target_date}. Please take action."
 
-        if r.contact_email:
-            send_email(r.contact_email, subject, body)
+        if r.email:
+            send_email(r.email, subject, body)
 
-        if r.contact_phone:
-            send_sms(r.contact_phone, body)
+        if r.phone:
+            send_sms(r.phone, body)
 
-        mark_sent(db, reminder_id, datetime.now(timezone.utc))
-        logger.info("✅ Reminder %s sent successfully", reminder_id)
+        mark_notification_sent(db, notification_id, datetime.now(timezone.utc))
+        logger.info("✅ Reminder %s sent successfully", notification_id)
 
     except Exception as e:
-        logger.exception("❌ Failed to process reminder %s: %s", reminder_id, e)
+        logger.exception("❌ Failed to process reminder %s: %s", notification_id, e)
         raise
     finally:
         db.close()
 
 
-def schedule_reminder_job(reminder_id: int, target_date: datetime, lead_time_days: int = 7):
+def schedule_notification_job(notification_id: int, target_date: datetime, lead_time_days: int = 7):
     """
     Schedule a reminder for execution at `target_date - lead_time_days`.
 
@@ -112,7 +113,7 @@ def schedule_reminder_job(reminder_id: int, target_date: datetime, lead_time_day
     if run_at < now_utc:
         # Avoid scheduling into the past
         run_at = now_utc + timedelta(seconds=5)
-        logger.warning("Adjusted schedule time for reminder %s to %s (was past)", reminder_id, run_at)
+        logger.warning("Adjusted schedule time for reminder %s to %s (was past)", notification_id, run_at)
 
     retry_policy = Retry(max=3, interval=[30, 60, 120])  # 30s, 1min, 2min
 
@@ -122,19 +123,66 @@ def schedule_reminder_job(reminder_id: int, target_date: datetime, lead_time_day
         scheduler.enqueue_at(
             run_at,
             send_reminder_job,
-            reminder_id,
+            notification_id,
             retry=retry_policy,
             # RQ doesn’t directly support on_failure DLQ;
             # you can handle that via a separate monitoring worker later.
         )
-        logger.info("🕒 Scheduled reminder %s at %s (lead %d days)", reminder_id, run_at, lead_time_days)
+        logger.info("🕒 Scheduled reminder %s at %s (lead %d days)", notification_id, run_at, lead_time_days)
 
     except Exception as e:
-        logger.error("Failed to schedule reminder %s: %s", reminder_id, e)
+        logger.error("Failed to schedule reminder %s: %s", notification_id, e)
         raise
 
     finally:
         dlq.empty()  # Clear DLQ to prevent buildup
+
+def enqueue_event_processing_job(event_id: int):
+    """
+    Push an event-processing job onto the Redis queue.
+    """
+    redis, q, dlq, scheduler = get_scheduler_components()
+    q.enqueue(process_event_job, event_id)
+
+def process_event_job(event_id: int):
+    """
+    Process an incoming event and create/schedule notifications.
+    """
+    db = SessionLocal()
+
+    event = get_event(db, event_id)
+    if not event:
+        return
+
+    # === Example business logic ===
+    if event.type == "user.signup":
+        n = create_notification(
+            db,
+            notification_type="welcome_email",
+            entity_id=event.payload.get("user_id"),
+            email=event.payload.get("email"),
+            phone=None,
+            target_date=None,        # immediate send
+            lead_time_days=0         # no lead time
+        )
+        schedule_notification_job(n.id, n.target_date, n.lead_time_days)
+
+    elif event.type == "payment.failed":
+        n = create_notification(
+            db,
+            notification_type="payment_failure",
+            entity_id=event.payload.get("user_id"),
+            email=event.payload.get("email"),
+            phone=None,
+            target_date=None,
+            lead_time_days=0
+        )
+        schedule_notification_job(n.id, n.target_date, n.lead_time_days)
+
+    # Add more event types as needed
+
+    db.close()
+
 
 if __name__ == "__main__":
     logger.info("🚀 Starting RQ scheduler loop (connected to %s)", settings.REDIS_URL)

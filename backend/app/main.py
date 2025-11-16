@@ -5,7 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.routes import events, notifications
 from app.core.config import settings
 from alembic.config import Config
-from alembic import command
 import logging
 import time
 import psycopg2

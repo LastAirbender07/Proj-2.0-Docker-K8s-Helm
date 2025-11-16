@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.api.v1.schemas import EventIn, EventOut
 from app.dependencies import get_db
 from app.db.crud.crud_event import create_event, list_events
+from app.workers.producer import enqueue_event_processing_job 
 
 router = APIRouter(prefix="/api/v1/events", tags=["events"])
 
@@ -17,6 +18,7 @@ def publish_event(payload: EventIn, db: Session = Depends(get_db)):
     """
     ev = create_event(db, payload.type, payload.payload)
     # Optionally enqueue notifications here
+    enqueue_event_processing_job(ev.id)
     return ev
 
 @router.get("/", response_model=list[EventOut])

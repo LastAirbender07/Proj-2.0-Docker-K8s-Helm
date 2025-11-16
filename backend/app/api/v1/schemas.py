@@ -13,23 +13,23 @@ class EventOut(BaseModel):
 
     model_config = { "from_attributes": True }
 
-class ReminderCreate(BaseModel):
-    target_type: str
-    target_identifier: str
+class NotificationCreate(BaseModel):
+    notification_type: str
+    entity_id: str
     target_date: datetime
     lead_time_days: int = 7
-    contact_email: EmailStr | None = None
-    contact_phone: str | None = None
+    email: EmailStr | None = None
+    phone: str | None = None
 
-class ReminderOut(BaseModel):
+class NotificationOut(BaseModel):
     id: int
-    target_type: str
-    target_identifier: str
+    notification_type: str
+    entity_id: str
     target_date: datetime
     lead_time_days: int
-    contact_email: EmailStr | None
-    contact_phone: str | None
+    email: EmailStr | None
+    phone: str | None
     sent_at: datetime | None
-    cancelled: bool
+    status: str | None # default as "PENDING"
 
     model_config = { "from_attributes": True }
