@@ -9,8 +9,7 @@ load_dotenv()
 from app.db.session import Base 
 from app.db.models import *
 from app.db.models.event import Event
-from app.db.models.reminder import Reminder
-
+from app.db.models.notification import Notification
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
