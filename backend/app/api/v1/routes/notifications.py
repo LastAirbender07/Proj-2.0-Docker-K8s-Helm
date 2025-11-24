@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
+from datetime import timezone
 import logging
 import sys
 
@@ -35,11 +36,14 @@ def create_notification_endpoint(
     """
     try:
         event_type = NotificationEventType(payload.notification_type)
+        target_date = payload.target_date
+        if target_date.tzinfo is None:              # If naive
+            target_date = target_date.replace(tzinfo=timezone.utc)
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid notification_type '{payload.notification_type}'. "
-                   f"Allowed values: {[e.value for e in NotificationEventType]}",
+            detail=f"Invalid notification_type '{payload.notification_type}';  Target date must be timezone-aware UTC datetime. "
+                   f"Allowed values: {[e.value for e in NotificationEventType]}; Given: {payload.notification_type}",
         )
     
     # Step 1: Create reminder entry in DB
@@ -47,7 +51,7 @@ def create_notification_endpoint(
         db,
         notification_type=event_type.value,
         entity_id=payload.entity_id,
-        target_date=payload.target_date,
+        target_date=target_date,
         lead_time_days=payload.lead_time_days,
         email=str(payload.email) if payload.email else None,
         phone=payload.phone,

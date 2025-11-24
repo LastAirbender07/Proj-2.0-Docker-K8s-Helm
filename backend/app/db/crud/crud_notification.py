@@ -1,9 +1,13 @@
 from sqlalchemy.orm import Session
 from app.db.models.notification import Notification, StatusType
-from datetime import datetime
+from datetime import datetime, timezone
 
 def create_notification(db: Session, *, notification_type: str, entity_id: str, target_date: datetime,
                     lead_time_days: int, email: str | None, phone: str | None):
+    # Ensure target_date is timezone-aware (UTC)
+    if target_date.tzinfo is None:
+        target_date = target_date.replace(tzinfo=timezone.utc)
+
     r = Notification(
         notification_type=notification_type,
         entity_id=entity_id,

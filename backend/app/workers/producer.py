@@ -126,8 +126,13 @@ def schedule_notification_job(notification_id: int, target_date: datetime, lead_
       - Retry policy for transient errors
       - Logging for visibility
     """
-    run_at = target_date - timedelta(days=lead_time_days)
+
+    if target_date.tzinfo is None:
+        target_date = target_date.replace(tzinfo=timezone.utc)
+
     now_utc = datetime.now(timezone.utc)
+
+    run_at = target_date - timedelta(days=lead_time_days)
 
     if run_at < now_utc:
         # Avoid scheduling into the past
@@ -252,6 +257,11 @@ def process_event_job(event_id: int):
         handler = handler_map.get(event_type, handle_custom)
         params = handler(event.payload or {})
 
+        # Handle target_date timezone awareness
+        target_date = params["target_date"]
+        if target_date.tzinfo is None:
+            target_date = target_date.replace(tzinfo=timezone.utc)
+
         # Create DB notification
         notification = create_notification(
             db,
@@ -259,7 +269,7 @@ def process_event_job(event_id: int):
             entity_id=params["entity_id"],
             email=params["email"],
             phone=params["phone"],  # logged only
-            target_date=params["target_date"],
+            target_date=target_date,
             lead_time_days=params["lead_time_days"],
         )
 

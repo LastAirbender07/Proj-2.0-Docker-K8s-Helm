@@ -558,7 +558,7 @@ def send_reminder_job(reminder_id: int):
         if r.contact_phone:
             send_sms(r.contact_phone, body)
 
-        mark_sent(db, reminder_id, datetime.utcnow())
+        mark_sent(db, reminder_id, datetime.now(timezone.utc))
         logger.info("Reminder %s sent", reminder_id)
     except Exception:
         logger.exception("Failed to send reminder %s", reminder_id)
@@ -568,9 +568,9 @@ def send_reminder_job(reminder_id: int):
 
 def schedule_reminder_job(reminder_id: int, target_date: datetime, lead_time_days: int = 7):
     run_at = target_date - timedelta(days=lead_time_days)
-    if run_at < datetime.utcnow():
+    if run_at < datetime.now(timezone.utc):
         # if run time in past, schedule immediately
-        run_at = datetime.utcnow() + timedelta(seconds=5)
+        run_at = datetime.now(timezone.utc) + timedelta(seconds=5)
     # schedule with rq-scheduler
     scheduler.enqueue_at(run_at, 'app.workers.producer.send_reminder_job', reminder_id)
     logger.info("Scheduled reminder %s at %s", reminder_id, run_at)
