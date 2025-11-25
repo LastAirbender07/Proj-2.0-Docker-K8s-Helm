@@ -147,10 +147,7 @@ def schedule_notification_job(notification_id: int, target_date: datetime, lead_
         scheduler.enqueue_at(
             run_at,
             send_reminder_job,
-            notification_id,
-            retry=retry_policy,
-            # RQ doesn’t directly support on_failure DLQ;
-            # you can handle that via a separate monitoring worker later.
+            notification_id
         )
         logger.info("🕒 Scheduled reminder %s at %s (lead %d days)", notification_id, run_at, lead_time_days)
 
@@ -166,7 +163,11 @@ def enqueue_event_processing_job(event_id: int):
     Push an event-processing job onto the Redis queue.
     """
     redis, q, dlq, scheduler = get_scheduler_components()
-    q.enqueue(process_event_job, event_id)
+    q.enqueue(
+        process_event_job,
+        args=(event_id,),
+        retry=Retry(max=3, interval=[30, 60, 120])   # retry 3 times with backoff
+    )
 
 
 def process_event_job(event_id: int):

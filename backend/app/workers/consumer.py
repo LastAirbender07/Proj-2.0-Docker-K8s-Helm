@@ -44,7 +44,7 @@ def start_worker():
         return
 
     queue = Queue(settings.RQ_QUEUE, connection=redis_conn)
-    worker = Worker([queue], connection=redis_conn)
+    worker = Worker([queue], connection=redis_conn, disable_default_exception_handler=False)
     logger.info("Worker started. Listening to queue: %s", settings.RQ_QUEUE)
     worker.work(with_scheduler=True)
 
