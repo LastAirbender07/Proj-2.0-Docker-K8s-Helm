@@ -1,179 +1,96 @@
 Alembic Migration Issue Summary
-1. Root Cause
+# Alembic Migration Issue Summary
+
+## Alembic Migration Issue
+
+### Root Cause
+- Alembic was not initialized and no migration versions existed.
+- The backend could not locate the Alembic configuration or migration scripts due to incorrect container file paths.
+- The database URL was not set for Alembic, so it had no valid connection.
+- Even after initialization, no versioned migration files were present, preventing upgrades.
+
+### Detailed Explanation
+- Missing Alembic setup: The project initially lacked the Alembic directory and configuration (alembic.ini and the /alembic folder), preventing migrations from running.
+- Incorrect path configuration: The backend attempted to run Alembic with a relative or invalid path, causing silent failures.
+- Database URL not set: sqlalchemy.url in alembic.ini was not dynamically configured, so Alembic could not connect to the Postgres DB.
+- No migration versions: With no files under /alembic/versions, Alembic could not detect or apply migrations, effectively blocking schema changes.
+
+### Resolution
+- Proper initialization: Added alembic.ini and the /alembic directory to the backend container.
+- Dynamic config path: Resolved Alembic config path dynamically:
+    ```python
+    cfg_path = os.path.join(os.path.dirname(__file__), "alembic.ini")
+    ```
+    and logged the absolute path for visibility.
+- Dynamic DB URL: Programmatically set:
+    ```python
+    config.set_main_option("sqlalchemy.url", db_url)
+    ```
+    to ensure Alembic connects to the correct Postgres instance.
+- Automatic revision and upgrade: When no versions existed, the system generated an initial migration automatically:
+    ```
+    alembic revision --autogenerate -m "initial schema"
+    ```
+    and applied migrations:
+    ```
+    alembic upgrade head
+    ```
+
+### Verification
+- Confirmed Alembic created an initial version file (583d8889edde_initial_schema.py).
+- Confirmed expected tables (events, reminders, etc.) were created in the database.
+
+### Outcome
+- Alembic migrations are now initialized, versioned, and automatically applied at backend startup.
+- The system connects to Postgres, detects schema changes, and applies them without manual intervention, improving containerized deployment and schema consistency across environments.
+
+---
+
+# Retry Logic Issue
+
+## Affected Components
+- Retry behavior for background jobs (process_event_job and send_reminder_job)
+- Failure handling for scheduled jobs via RQ Scheduler
+- Dead Letter Queue (DLQ) behavior
+- Reliability of the event → notification → reminder pipeline
+
+## Root Cause
+- Retry logic was applied at the worker level instead of at enqueue time.
+- RQ does not honor worker-level retry configuration; job retry metadata must be set when enqueuing.
+- Scheduler-created jobs did not include retry metadata and were not retried.
+- A dlq.empty() call unintentionally purged failed jobs, removing failure visibility.
+
+## Design Intent and the Problem
+- Initial intent: centralize retry logic in the worker to simplify enqueue code.
+    ```python
+    worker = Worker(..., retry=Retry(...))
+    ```
+- Problem: RQ requires retry metadata per job at enqueue—workers cannot globally enforce retries. The scheduler ignores worker retry settings. Clearing the DLQ removed diagnostics.
+
+## Fix Implemented
+- Set retry policy when enqueuing jobs:
+    ```python
+    q.enqueue(
+            process_event_job,
+            args=(event_id,),
+            retry=Retry(max=3, interval=[30, 60, 120])
+    )
+    ```
+- Set retry policy for scheduled jobs:
+    ```python
+    scheduler.enqueue_at(
+            run_at,
+            send_reminder_job,
+            notification_id,
+            retry=Retry(max=3, interval=[30, 60, 120])
+    )
+    ```
+- Remove dangerous DLQ clearing (removed dlq.empty()).
+- Leave workers in default mode and rely on job-level retry metadata.
+
+## Lessons Learned
+- RQ retry logic is job-based; the worker cannot override it.
+- All jobs (including scheduled ones) must include retry metadata at enqueue.
+- Never automatically clear the DLQ—it's essential for diagnosing failures.
+- Scheduler jobs behave differently and require explicit retry settings.
 
-The backend container initially failed to apply database migrations during startup because Alembic was not initialized and no migration versions existed. Additionally, the application could not locate the Alembic configuration or migration scripts correctly due to incorrect file paths in the container environment.
-
-2. Detailed Explanation
-
-Missing Alembic setup: The project did not include the Alembic directory or configuration initially (alembic.ini and /alembic folder), preventing migrations from running.
-
-Incorrect configuration path: The backend attempted to execute Alembic commands using a relative or invalid path, resulting in silent failures.
-
-Database URL not set: The sqlalchemy.url parameter inside alembic.ini was not dynamically configured, so Alembic had no valid database connection.
-
-No migration versions: Even after Alembic initialization, there were no versioned migration files in /alembic/versions, causing Alembic to hang when attempting upgrades.
-
-These issues collectively prevented the backend from generating or applying schema migrations to the PostgreSQL database, blocking the application’s startup flow.
-
-3. Resolution
-
-Initialized Alembic properly: Added the alembic.ini file and /alembic directory within the backend container.
-
-Dynamic configuration path: Updated the code to resolve Alembic’s configuration path dynamically using:
-
-cfg_path = os.path.join(os.path.dirname(__file__), "alembic.ini")
-
-
-and logged the absolute path for visibility.
-
-Dynamic database URL: Programmatically set config.set_main_option("sqlalchemy.url", db_url) to ensure Alembic connected to the correct Postgres instance.
-
-Automatic revision and upgrade: Added logic to detect missing versions, generate the initial migration dynamically using:
-
-alembic revision --autogenerate -m "initial schema"
-
-
-and then apply migrations with:
-
-alembic upgrade head
-
-
-Verification: Confirmed Alembic successfully generated the initial version (583d8889edde_initial_schema.py) and created all expected tables (events, reminders, etc.) in the database.
-
-4. Outcome
-
-Alembic migrations are now automatically initialized, versioned, and applied at backend startup.
-The system successfully connects to PostgreSQL, detects schema changes, and applies them without manual intervention — ensuring smooth containerized deployment and schema consistency across environments.
-
-
-Retry Logic Issue – 
-1. What Was Affected
-
-The following components of the notification system were affected:
-
-Retry behavior for background jobs (process_event_job and send_reminder_job)
-
-Failure handling for scheduled jobs submitted via RQ Scheduler
-
-Dead Letter Queue (DLQ) behavior
-
-Reliability of event → notification → reminder pipeline
-
-Failures inside jobs were not being retried correctly, which could lead to:
-
-Lost event-processing jobs
-
-Lost scheduled reminder jobs
-
-Jobs incorrectly ending up in DLQ
-
-Inconsistent or missing notifications
-
-2. What Was the Issue (Root Cause)
-
-The retry logic was initially misconfigured due to a misunderstanding of how RQ applies retries.
-
-Specifically:
-
-Retry configuration was being applied at the worker level rather than at the job enqueue level.
-
-RQ does not honor worker-level retry configuration for individual jobs.
-
-Instead, each job must explicitly include a Retry(...) policy at enqueue time.
-
-This caused:
-
-Jobs enqueued without retry metadata
-
-Worker default behavior:
-
-If a job failed → mark as failed
-
-No retry → optionally go to DLQ
-
-Scheduled jobs from rq-scheduler had no retry metadata, causing silent failures
-
-Additionally, a dlq.empty() call inside the scheduling process was unintentionally purging failed jobs.
-
-3. Why It Was Designed That Way & What Was the Problem
-Initial Intent
-
-The design attempted to:
-
-Centralize retry logic inside the worker:
-
-worker = Worker(..., retry=Retry(...))
-
-
-Simplify enqueue code by not requiring retry parameters everywhere.
-
-Allow the worker to govern failure and retry behavior globally.
-
-Problem with This Design
-
-RQ explicitly does not work this way.
-
-Workers cannot globally apply retry policies.
-
-Only job-level retry metadata matters.
-
-Scheduler-created jobs ignore worker retry settings entirely.
-
-DLQ clearing (dlq.empty()) removed visibility into real failures.
-
-Thus, jobs that should have retried were:
-
-Never retried
-
-Directly failing
-
-Or silently disappearing
-
-4. What Was the Fix – What Did We Learn?
-Fix Implemented
-
-We corrected the implementation to follow RQ’s actual design:
-
-✔ Add retry policy per job at enqueue
-q.enqueue(
-    process_event_job,
-    args=(event_id,),
-    retry=Retry(max=3, interval=[30, 60, 120])
-)
-
-✔ Add retry policy for scheduled jobs
-scheduler.enqueue_at(
-    run_at,
-    send_reminder_job,
-    notification_id,
-    retry=Retry(max=3, interval=[30, 60, 120])
-)
-
-✔ Remove dangerous DLQ clearing
-
-dlq.empty() was removed to prevent loss of failure information.
-
-✔ Worker left in default mode
-
-Workers now process jobs without attempting to override retry logic.
-
-Lessons Learned
-1. RQ retry logic is purely job-based
-
-Workers do not control retry behavior.
-
-Every job must be enqueued with explicit retry metadata.
-
-Scheduled jobs also require retry config.
-
-2. Never clear DLQs automatically
-
-DLQ is critical for diagnosing failures.
-
-Automatic clearing hides real issues.
-
-3. Scheduler jobs behave differently
-
-RQ Scheduler does not infer retry settings.
-
-Must be explicitly set on each scheduled job.
