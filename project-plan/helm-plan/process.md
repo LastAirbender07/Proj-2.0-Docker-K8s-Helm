@@ -70,3 +70,131 @@ jayaraj@jayaraj-machine:~/Learnings/Proj-2.0-Docker-K8s-Helm/istio-1.28.0$ helm 
 Hang tight while we grab the latest from your chart repositories...
 ...Successfully got an update from the "bitnami" chart repository
 Update Complete. ⎈Happy Helming!⎈
+
+ kubectl create secret generic pg-secret   -n event-system   --from-literal=postgres-password="postgres"   --from-literal=app-username="postgres"   --from-literal=app-password="supersecretpassword"
+secret/pg-secret created
+jayaraj@jayaraj-machine:~/Learnings/Proj-2.0-Docker-K8s-Helm$ helm install event-postgres bitnami/postgresql \
+  -n event-system \
+  --set auth.existingSecret=pg-secret \
+  --set auth.postgresPasswordKey=postgres-password \
+  --set auth.username=postgres \
+  --set auth.passwordKey=app-password \
+  --set auth.database=notifications \
+  --set primary.persistence.size=1Gi
+NAME: event-postgres
+LAST DEPLOYED: Fri Nov 28 21:21:51 2025
+NAMESPACE: event-system
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+CHART NAME: postgresql
+CHART VERSION: 18.1.13
+APP VERSION: 18.1.0
+
+⚠ WARNING: Since August 28th, 2025, only a limited subset of images/charts are available for free.
+    Subscribe to Bitnami Secure Images to receive continued support and security updates.
+    More info at https://bitnami.com and https://github.com/bitnami/containers/issues/83267
+
+** Please be patient while the chart is being deployed **
+
+WARNING: PostgreSQL has been configured without authentication, this is not recommended for production environments.
+
+PostgreSQL can be accessed via port 5432 on the following DNS names from within your cluster:
+
+    event-postgres-postgresql.event-system.svc.cluster.local - Read/Write connection
+
+To get the password for "postgres" run:
+
+    export POSTGRES_PASSWORD=$(kubectl get secret --namespace event-system pg-secret -o jsonpath="{.data.postgres-password}" | base64 -d)
+
+To connect to your database run the following command:
+
+    kubectl run event-postgres-postgresql-client --rm --tty -i --restart='Never' --namespace event-system --image registry-1.docker.io/bitnami/postgresql:latest \
+      --command -- psql --host event-postgres-postgresql -d notifications -p 5432
+
+    > NOTE: If you access the container using bash, make sure that you execute "/opt/bitnami/scripts/postgresql/entrypoint.sh /bin/bash" in order to avoid the error "psql: local user with ID 1001} does not exist"
+
+To connect to your database from outside the cluster execute the following commands:
+
+    kubectl port-forward --namespace event-system svc/event-postgres-postgresql 5432:5432 &
+    psql --host 127.0.0.1 -d notifications -p 5432
+
+WARNING: The configured password will be ignored on new installation in case when previous PostgreSQL release was deleted through the helm command. In that case, old PVC will have an old password, and setting it through helm won't take effect. Deleting persistent volumes (PVs) will solve the issue.
+WARNING: Rolling tag detected (bitnami/postgresql:latest), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://techdocs.broadcom.com/us/en/vmware-tanzu/application-catalog/tanzu-application-catalog/services/tac-doc/apps-tutorials-understand-rolling-tags-containers-index.html
+WARNING: Rolling tag detected (bitnami/os-shell:latest), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://techdocs.broadcom.com/us/en/vmware-tanzu/application-catalog/tanzu-application-catalog/services/tac-doc/apps-tutorials-understand-rolling-tags-containers-index.html
+
+WARNING: There are "resources" sections in the chart not set. Using "resourcesPreset" is not recommended for production. For production installations, please set the following values according to your workload needs:
+  - primary.resources
+  - readReplicas.resources
++info https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+jayaraj@jayaraj-machine:~/Learnings/Proj-2.0-Docker-K8s-Helm$ helm install event-redis bitnami/redis \
+  -n event-system \
+  --set architecture=standalone \
+  --set auth.enabled=false \
+  --set usePassword=false \
+  --set master.persistence.size=500Mi
+NAME: event-redis
+LAST DEPLOYED: Fri Nov 28 21:22:58 2025
+NAMESPACE: event-system
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+CHART NAME: redis
+CHART VERSION: 24.0.0
+APP VERSION: 8.4.0
+
+⚠ WARNING: Since August 28th, 2025, only a limited subset of images/charts are available for free.
+    Subscribe to Bitnami Secure Images to receive continued support and security updates.
+    More info at https://bitnami.com and https://github.com/bitnami/containers/issues/83267
+
+** Please be patient while the chart is being deployed **
+
+Redis&reg; can be accessed via port 6379 on the following DNS name from within your cluster:
+
+    event-redis-master.event-system.svc.cluster.local
+
+
+
+To connect to your Redis&reg; server:
+
+1. Run a Redis&reg; pod that you can use as a client:
+
+   kubectl run --namespace event-system redis-client --restart='Never'  --image registry-1.docker.io/bitnami/redis:latest --command -- sleep infinity
+
+   Use the following command to attach to the pod:
+
+   kubectl exec --tty -i redis-client \
+   --namespace event-system -- bash
+
+2. Connect using the Redis&reg; CLI:
+   redis-cli -h event-redis-master
+
+To connect to your database from outside the cluster execute the following commands:
+
+    kubectl port-forward --namespace event-system svc/event-redis-master 6379:6379 &
+    redis-cli -h 127.0.0.1 -p 6379
+WARNING: Rolling tag detected (bitnami/redis:latest), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://techdocs.broadcom.com/us/en/vmware-tanzu/application-catalog/tanzu-application-catalog/services/tac-doc/apps-tutorials-understand-rolling-tags-containers-index.html
+WARNING: Rolling tag detected (bitnami/redis-sentinel:latest), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://techdocs.broadcom.com/us/en/vmware-tanzu/application-catalog/tanzu-application-catalog/services/tac-doc/apps-tutorials-understand-rolling-tags-containers-index.html
+WARNING: Rolling tag detected (bitnami/redis-exporter:latest), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://techdocs.broadcom.com/us/en/vmware-tanzu/application-catalog/tanzu-application-catalog/services/tac-doc/apps-tutorials-understand-rolling-tags-containers-index.html
+WARNING: Rolling tag detected (bitnami/os-shell:latest), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://techdocs.broadcom.com/us/en/vmware-tanzu/application-catalog/tanzu-application-catalog/services/tac-doc/apps-tutorials-understand-rolling-tags-containers-index.html
+WARNING: Rolling tag detected (bitnami/os-shell:latest), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://techdocs.broadcom.com/us/en/vmware-tanzu/application-catalog/tanzu-application-catalog/services/tac-doc/apps-tutorials-understand-rolling-tags-containers-index.html
+
+WARNING: There are "resources" sections in the chart not set. Using "resourcesPreset" is not recommended for production. For production installations, please set the following values according to your workload needs:
+  - replica.resources
+  - master.resources
++info https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
+jayaraj@jayaraj-machine:~/Learnings/Proj-2.0-Docker-K8s-Helm$ kubectl get pods -n event-system
+NAME                          READY   STATUS    RESTARTS   AGE
+event-postgres-postgresql-0   2/2     Running   0          2m48s
+event-redis-master-0          2/2     Running   0          101s
+jayaraj@jayaraj-machine:~/Learnings/Proj-2.0-Docker-K8s-Helm$ 
