@@ -48,13 +48,26 @@ env:
 backend:
   replicaCount: 1
   port: 5001
-  
+
   livenessProbe:
+    httpGet:
+      path: /health
+      port: http
     initialDelaySeconds: 10
     periodSeconds: 10
-  redinessProbe:
+    timeoutSeconds: 2
+    failureThreshold: 3
+    successThreshold: 1
+
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http
     initialDelaySeconds: 5
     periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+    successThreshold: 1
 
   service:
     type: ClusterIP
