@@ -28,7 +28,7 @@ spec:
 
           ports:
             - name: http
-              containerPort: {{ .Values.backend.service.port }}
+              containerPort: {{ .Values.backend.port }}
               protocol: TCP
 
           env:

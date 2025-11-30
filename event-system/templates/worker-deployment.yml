@@ -5,46 +5,46 @@ metadata:
   labels:
     {{- include "event-system.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.worker.replicaCount }}
-  {{- end }}
   selector:
     matchLabels:
+      app.kubernetes.io/component: worker
       {{- include "event-system.selectorLabels" . | nindent 6 }}
-      app: worker
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
-      annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       labels:
+        app.kubernetes.io/component: worker
         {{- include "event-system.labels" . | nindent 8 }}
-        {{- with .Values.podLabels }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
-        app: worker
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      serviceAccountName: {{ include "event-system.serviceAccountName" . }}
-      {{- with .Values.podSecurityContext }}
-      securityContext:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       containers:
         - name: {{ .Chart.Name }}-worker
-          {{- with .Values.securityContext }}
-          securityContext:
+          image: "{{ .Values.image.worker.repository }}:{{ .Values.image.worker.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          # Worker has no ports
+          ports: []
+
+          # Shared env
+          env:
+            {{- range $key, $val := .Values.env }}
+            - name: {{ $key }}
+              {{- if hasKey $val "valueFrom" }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $val.valueFrom.secretKeyRef.name }}
+                  key: {{ $val.valueFrom.secretKeyRef.key }}
+              {{- else }}
+              value: "{{ $val }}"
+              {{- end }}
+            {{- end }}
+
+          command:
+            - "/app/.venv/bin/python"
+            - "-u"
+            - "-m"
+            - "app.workers.consumer"
+
+          {{- with .Values.worker.resources }}
+          resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["/app/.venv/bin/python", "-u", "-m", "app.workers.consumer"]
-          env:
-            {{- range .Values.backend.env }}
-            - name: {{ .name }}
-              value: "{{ .value }}"
-            {{- end }}
