@@ -53,6 +53,15 @@ backend:
   replicaCount: 1
   port: 5001
 
+  command:
+    - "/app/.venv/bin/uvicorn"
+  args:
+    - "app.main:app"
+    - "--host"
+    - "0.0.0.0"
+    - "--port"
+    - "5001"
+
   livenessProbe:
     httpGet:
       path: /health

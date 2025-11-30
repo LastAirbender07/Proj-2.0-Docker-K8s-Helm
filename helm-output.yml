@@ -142,6 +142,9 @@ spec:
               value: "thalapathy@gmail.com"
             - name: SMTP_USE_SSL
               value: "false"
+
+          command: ["/app/.venv/bin/uvicorn"]
+          args: ["app.main:app","--host","0.0.0.0","--port","5001"]
           livenessProbe:
             failureThreshold: 3
             httpGet:

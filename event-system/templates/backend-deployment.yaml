@@ -45,6 +45,9 @@ spec:
               {{- end }}
             {{- end }}
 
+          command: {{ toJson .Values.backend.command }}
+          args: {{ toJson .Values.backend.args }}
+
           {{- with .Values.backend.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
