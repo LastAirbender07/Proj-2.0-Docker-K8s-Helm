@@ -138,3 +138,16 @@ istio:
   tls:
     enabled: false
     secretName: ""   # e.g. cert-manager secret
+
+
+serviceAccount:
+  create: false
+  annotations: {}
+  automount: true
+
+httpRoute:
+  enabled: false
+
+ingress:
+  enabled: false
+  

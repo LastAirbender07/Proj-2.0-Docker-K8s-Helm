@@ -29,7 +29,7 @@ spec:
           env:
             {{- range $key, $val := .Values.env }}
             - name: {{ $key }}
-              {{- if hasKey $val "valueFrom" }}
+              {{- if kindIs "map" $val }}
               valueFrom:
                 secretKeyRef:
                   name: {{ $val.valueFrom.secretKeyRef.name }}
