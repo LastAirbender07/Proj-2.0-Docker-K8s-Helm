@@ -8,8 +8,6 @@ metadata:
 spec:
   selector:
     {{- toYaml .Values.istio.gateway.ingressGatewaySelector | nindent 4 }}
-    matchLabels:
-      {{- include "event-system.selectorLabels" . | nindent 6 }}
   servers:
     - port:
         number: {{ .Values.istio.gateway.port }}

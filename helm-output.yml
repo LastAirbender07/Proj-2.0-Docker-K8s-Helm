@@ -1,0 +1,397 @@
+---
+# Source: event-system/templates/backend-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: event-system-backend
+  namespace: event-system
+  labels:
+    helm.sh/chart: event-system-0.1.0
+    app.kubernetes.io/name: event-system
+    app.kubernetes.io/instance: event-system
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 5001
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: event-system
+    app.kubernetes.io/instance: event-system
+---
+# Source: event-system/templates/scheduler-service.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: event-system-scheduler
+  namespace: event-system
+  labels:
+    helm.sh/chart: event-system-0.1.0
+    app.kubernetes.io/name: event-system
+    app.kubernetes.io/instance: event-system
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 5001
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: event-system
+    app.kubernetes.io/instance: event-system
+---
+# Source: event-system/templates/worker-service.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: event-system-worker
+  namespace: event-system
+  labels:
+    helm.sh/chart: event-system-0.1.0
+    app.kubernetes.io/name: event-system
+    app.kubernetes.io/instance: event-system
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 5001
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: event-system
+    app.kubernetes.io/instance: event-system
+---
+# Source: event-system/templates/backend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-system-backend
+  namespace: event-system
+  labels:
+    helm.sh/chart: event-system-0.1.0
+    app.kubernetes.io/name: event-system
+    app.kubernetes.io/instance: event-system
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: event-system
+      app.kubernetes.io/instance: event-system
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: event-system-0.1.0
+        app.kubernetes.io/name: event-system
+        app.kubernetes.io/instance: event-system
+        app.kubernetes.io/version: "1.16.0"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      containers:
+        - name: event-system-backend
+          image: "jayaraj0781/event-backend:v1.0.0"
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 5001
+              protocol: TCP
+
+          env:
+            - name: FROM_EMAIL
+              value: "no-reply@example.com"
+            - name: POSTGRES_DB
+              value: "notifications"
+            - name: POSTGRES_HOST
+              value: "event-postgres-postgresql"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pg-secret
+                  key: app-password
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pg-secret
+                  key: app-username
+            - name: REDIS_HOST
+              value: "event-redis-master"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: RQ_QUEUE
+              value: "default"
+            - name: RQ_RETRIES
+              value: "3"
+            - name: SMTP_HOST
+              value: "smtp.gmail.com"
+            - name: SMTP_PASSWORD
+              value: "securepassword"
+            - name: SMTP_PORT
+              value: "587"
+            - name: SMTP_USER
+              value: "thalapathy@gmail.com"
+            - name: SMTP_USE_SSL
+              value: "false"
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 2
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 2
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 250m
+              memory: 256Mi
+---
+# Source: event-system/templates/scheduler-deployment.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-system-scheduler
+  namespace: event-system
+  labels:
+    helm.sh/chart: event-system-0.1.0
+    app.kubernetes.io/name: event-system
+    app.kubernetes.io/instance: event-system
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: scheduler
+      app.kubernetes.io/name: event-system
+      app.kubernetes.io/instance: event-system
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: scheduler
+        helm.sh/chart: event-system-0.1.0
+        app.kubernetes.io/name: event-system
+        app.kubernetes.io/instance: event-system
+        app.kubernetes.io/version: "1.16.0"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      containers:
+        - name: event-system-scheduler
+          image: "jayaraj0781/event-backend:v1.0.0"
+          imagePullPolicy: Always
+
+          # Scheduler has no ports
+          ports: []
+          
+          # Shared env
+          env:
+            - name: FROM_EMAIL
+              value: "no-reply@example.com"
+            - name: POSTGRES_DB
+              value: "notifications"
+            - name: POSTGRES_HOST
+              value: "event-postgres-postgresql"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pg-secret
+                  key: app-password
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pg-secret
+                  key: app-username
+            - name: REDIS_HOST
+              value: "event-redis-master"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: RQ_QUEUE
+              value: "default"
+            - name: RQ_RETRIES
+              value: "3"
+            - name: SMTP_HOST
+              value: "smtp.gmail.com"
+            - name: SMTP_PASSWORD
+              value: "securepassword"
+            - name: SMTP_PORT
+              value: "587"
+            - name: SMTP_USER
+              value: "thalapathy@gmail.com"
+            - name: SMTP_USE_SSL
+              value: "false"
+
+          command:
+            - "/app/.venv/bin/python"
+            - "-u"
+            - "-m"
+            - "app.workers.producer"
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+# Source: event-system/templates/worker-deployment.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-system-worker
+  namespace: event-system
+  labels:
+    helm.sh/chart: event-system-0.1.0
+    app.kubernetes.io/name: event-system
+    app.kubernetes.io/instance: event-system
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: worker
+      app.kubernetes.io/name: event-system
+      app.kubernetes.io/instance: event-system
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: worker
+        helm.sh/chart: event-system-0.1.0
+        app.kubernetes.io/name: event-system
+        app.kubernetes.io/instance: event-system
+        app.kubernetes.io/version: "1.16.0"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      containers:
+        - name: event-system-worker
+          image: "jayaraj0781/event-backend:v1.0.0"
+          imagePullPolicy: Always
+
+          # Worker has no ports
+          ports: []
+
+          # Shared env
+          env:
+            - name: FROM_EMAIL
+              value: "no-reply@example.com"
+            - name: POSTGRES_DB
+              value: "notifications"
+            - name: POSTGRES_HOST
+              value: "event-postgres-postgresql"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pg-secret
+                  key: app-password
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pg-secret
+                  key: app-username
+            - name: REDIS_HOST
+              value: "event-redis-master"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: RQ_QUEUE
+              value: "default"
+            - name: RQ_RETRIES
+              value: "3"
+            - name: SMTP_HOST
+              value: "smtp.gmail.com"
+            - name: SMTP_PASSWORD
+              value: "securepassword"
+            - name: SMTP_PORT
+              value: "587"
+            - name: SMTP_USER
+              value: "thalapathy@gmail.com"
+            - name: SMTP_USE_SSL
+              value: "false"
+
+          command:
+            - "/app/.venv/bin/python"
+            - "-u"
+            - "-m"
+            - "app.workers.consumer"
+          resources:
+            limits:
+              cpu: 300m
+              memory: 256Mi
+            requests:
+              cpu: 150m
+              memory: 128Mi
+---
+# Source: event-system/templates/istio-gateway.yml
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: event-system-gateway
+  namespace: event-system
+  labels:
+    helm.sh/chart: event-system-0.1.0
+    app.kubernetes.io/name: event-system
+    app.kubernetes.io/instance: event-system
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - api.jayaraj.dev
+---
+# Source: event-system/templates/istio-virtualservice-backend.yml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: event-system-backend-vs
+  namespace: event-system
+  labels:
+    helm.sh/chart: event-system-0.1.0
+    app.kubernetes.io/name: event-system
+    app.kubernetes.io/instance: event-system
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  hosts:
+    - api.jayaraj.dev
+  gateways:
+    - event-system-gateway
+  http:
+    - match:
+        - uri:
+            prefix: "/"
+      route:
+        - destination:
+            host: event-system-backend
+            port:
+              number: 5001
