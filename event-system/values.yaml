@@ -1,3 +1,6 @@
+namespace: event-system
+
+
 image:
   backend:
     repository: jayaraj0781/event-backend
@@ -9,6 +12,7 @@ image:
     repository: jayaraj0781/event-backend
     tag: "1.0.0"
   pullPolicy: Always
+
 
 env:
   # database
@@ -82,6 +86,7 @@ backend:
       cpu: 250m
       memory: 256Mi
 
+
 worker:
   replicaCount: 1
 
@@ -97,13 +102,14 @@ worker:
       cpu: 150m
       memory: 128Mi
 
+
 scheduler:
   replicaCount: 1
 
   service:
     type: ClusterIP
     port: 5001
-    
+
   resources:
     limits:
       cpu: 200m
@@ -111,3 +117,22 @@ scheduler:
     requests:
       cpu: 100m
       memory: 128Mi
+
+
+istio:
+  enabled: true
+
+  gateway:
+    port: 80
+    hosts:
+      - "*"   # default, overridden per environment
+    ingressGatewaySelector:
+      istio: ingressgateway # use default istio ingress gateway
+
+  virtualService:
+    hosts:
+      - "*"   # same override
+
+  tls:
+    enabled: false
+    secretName: ""   # e.g. cert-manager secret

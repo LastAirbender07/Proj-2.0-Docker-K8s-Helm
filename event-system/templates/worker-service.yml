@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "event-system.fullname" . }}-worker
+  namespace: {{ .Values.namespace }}
   labels:
     {{- include "event-system.labels" . | nindent 4 }}
 spec:

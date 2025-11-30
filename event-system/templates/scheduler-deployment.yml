@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "event-system.fullname" . }}-scheduler
+  namespace: {{ .Values.namespace }}
   labels:
     {{- include "event-system.labels" . | nindent 4 }}
 spec:
