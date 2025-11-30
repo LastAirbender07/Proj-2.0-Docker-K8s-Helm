@@ -125,13 +125,15 @@ istio:
   gateway:
     port: 80
     hosts:
-      - "*"   # default, overridden per environment
+      - api.jayaraj.dev
+      # - "*"   # default, overridden per environment
     ingressGatewaySelector:
       istio: ingressgateway # use default istio ingress gateway
 
   virtualService:
     hosts:
-      - "*"   # same override
+      - api.jayaraj.dev
+      # - "*"   # same override
 
   tls:
     enabled: false
