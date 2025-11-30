@@ -84,6 +84,11 @@ backend:
 
 worker:
   replicaCount: 1
+
+  service:
+    type: ClusterIP
+    port: 5001
+
   resources:
     limits:
       cpu: 300m
@@ -94,6 +99,11 @@ worker:
 
 scheduler:
   replicaCount: 1
+
+  service:
+    type: ClusterIP
+    port: 5001
+    
   resources:
     limits:
       cpu: 200m
