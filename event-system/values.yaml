@@ -20,13 +20,13 @@ env:
     valueFrom:
       secretKeyRef:
         name: pg-secret
-        key: app-username
-
+        key: username
   POSTGRES_PASSWORD:
     valueFrom:
       secretKeyRef:
         name: pg-secret
-        key: app-password
+        key: password
+
 
   POSTGRES_DB: "notifications"
   POSTGRES_HOST: "event-postgres-postgresql"
@@ -35,6 +35,7 @@ env:
   # redis
   REDIS_HOST: "event-redis-master"
   REDIS_PORT: "6379"
+  REDIS_DB: "0"
 
   # rq
   RQ_QUEUE: "default"

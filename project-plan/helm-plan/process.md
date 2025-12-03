@@ -198,3 +198,216 @@ NAME                          READY   STATUS    RESTARTS   AGE
 event-postgres-postgresql-0   2/2     Running   0          2m48s
 event-redis-master-0          2/2     Running   0          101s
 jayaraj@jayaraj-machine:~/Learnings/Proj-2.0-Docker-K8s-Helm$ 
+
+
+ayaraj@jayaraj-machine:~/Learnings/Proj-2.0-Docker-K8s-Helm$ kubectl create secret generic pg-secret -n event-system   --from-literal=postgres-username=postgresUser   --from-literal=postgres-password=supersecretpassword   --from-literal=postgres-database=notifications
+secret/pg-secret created
+jayaraj@jayaraj-machine:~/Learnings/Proj-2.0-Docker-K8s-Helm$ kubectl get secrets -n event-system
+NAME                                TYPE                 DATA   AGE
+pg-secret                           Opaque               3      9s
+sh.helm.release.v1.event-redis.v1   helm.sh/release.v1   1      3d
+jayaraj@jayaraj-machine:~/Learnings/Proj-2.0-Docker-K8s-Helm$ kubectl get secret pg-secret -n event-system -o yaml
+apiVersion: v1
+data:
+  postgres-database: bm90aWZpY2F0aW9ucw==
+  postgres-password: c3VwZXJzZWNyZXRwYXNzd29yZA==
+  postgres-username: cG9zdGdyZXNVc2Vy
+kind: Secret
+metadata:
+  creationTimestamp: "2025-12-01T16:21:00Z"
+  name: pg-secret
+  namespace: event-system
+  resourceVersion: "77681"
+  uid: 1df8869b-dc75-4ecc-ab87-042a261cadcb
+type: Opaque
+jayaraj@jayaraj-machine:~/Learnings/Proj-2.0-Docker-K8s-Helm$ helm install event-postgres bitnami/postgresql \
+  -n event-system \
+  --set auth.existingSecret=pg-secret \
+  --set auth.secretKeys.userKey=postgres-username \
+  --set auth.secretKeys.passwordKey=postgres-password \
+  --set auth.secretKeys.databaseKey=postgres-database \
+  --set volumePermissions.enabled=true \
+  --set persistence.size=1Gi
+NAME: event-postgres
+LAST DEPLOYED: Mon Dec  1 21:52:34 2025
+NAMESPACE: event-system
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+CHART NAME: postgresql
+CHART VERSION: 18.1.13
+APP VERSION: 18.1.0
+
+⚠ WARNING: Since August 28th, 2025, only a limited subset of images/charts are available for free.
+    Subscribe to Bitnami Secure Images to receive continued support and security updates.
+    More info at https://bitnami.com and https://github.com/bitnami/containers/issues/83267
+
+** Please be patient while the chart is being deployed **
+
+WARNING: PostgreSQL has been configured without authentication, this is not recommended for production environments.
+
+PostgreSQL can be accessed via port 5432 on the following DNS names from within your cluster:
+
+    event-postgres-postgresql.event-system.svc.cluster.local - Read/Write connection
+
+To get the password for "postgres" run:
+
+    export POSTGRES_PASSWORD=$(kubectl get secret --namespace event-system pg-secret -o jsonpath="{.data.postgres-password}" | base64 -d)
+
+To connect to your database run the following command:
+
+    kubectl run event-postgres-postgresql-client --rm --tty -i --restart='Never' --namespace event-system --image registry-1.docker.io/bitnami/postgresql:latest \
+      --command -- psql --host event-postgres-postgresql -d postgres -p 5432
+
+    > NOTE: If you access the container using bash, make sure that you execute "/opt/bitnami/scripts/postgresql/entrypoint.sh /bin/bash" in order to avoid the error "psql: local user with ID 1001} does not exist"
+
+To connect to your database from outside the cluster execute the following commands:
+
+    kubectl port-forward --namespace event-system svc/event-postgres-postgresql 5432:5432 &
+    psql --host 127.0.0.1 -d postgres -p 5432
+
+WARNING: The configured password will be ignored on new installation in case when previous PostgreSQL release was deleted through the helm command. In that case, old PVC will have an old password, and setting it through helm won't take effect. Deleting persistent volumes (PVs) will solve the issue.
+WARNING: Rolling tag detected (bitnami/postgresql:latest), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://techdocs.broadcom.com/us/en/vmware-tanzu/application-catalog/tanzu-application-catalog/services/tac-doc/apps-tutorials-understand-rolling-tags-containers-index.html
+WARNING: Rolling tag detected (bitnami/os-shell:latest), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://techdocs.broadcom.com/us/en/vmware-tanzu/application-catalog/tanzu-application-catalog/services/tac-doc/apps-tutorials-understand-rolling-tags-containers-index.html
+
+WARNING: There are "resources" sections in the chart not set. Using "resourcesPreset" is not recommended for production. For production installations, please set the following values according to your workload needs:
+  - primary.resources
+  - readReplicas.resources
+  - volumePermissions.resources
++info https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+jayaraj@jayaraj-machine:~/Learnings/Proj-2.0-Docker-K8s-Helm$ 
+
+
+
+
+secret.yml:
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pg-secret
+  namespace: event-system
+type: Opaque
+stringData:
+  postgres-password: supersecretpassword   # admin password
+  password: supersecretpassword            # app user password
+  username: user                           # app DB user
+  database: notifications                  # app DB name
+
+
+jayaraj@jayaraj-machine:~/Learnings/Proj-2.0-Docker-K8s-Helm$ helm install event-postgres bitnami/postgresql \
+  --namespace event-system \
+  --set auth.existingSecret=pg-secret \
+  --set auth.username=user \
+  --set auth.secretKeys.adminPasswordKey=postgres-password \
+  --set auth.secretKeys.userPasswordKey=password \
+  --set auth.database=notifications
+  --set volumePermissions.enabled=true \
+  --set persistence.size=1Gi
+NAME: event-postgres
+LAST DEPLOYED: Wed Dec  3 21:06:51 2025
+NAMESPACE: event-system
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+CHART NAME: postgresql
+CHART VERSION: 18.1.13
+APP VERSION: 18.1.0
+
+⚠ WARNING: Since August 28th, 2025, only a limited subset of images/charts are available for free.
+    Subscribe to Bitnami Secure Images to receive continued support and security updates.
+    More info at https://bitnami.com and https://github.com/bitnami/containers/issues/83267
+
+** Please be patient while the chart is being deployed **
+
+WARNING: PostgreSQL has been configured without authentication, this is not recommended for production environments.
+
+PostgreSQL can be accessed via port 5432 on the following DNS names from within your cluster:
+
+    event-postgres-postgresql.event-system.svc.cluster.local - Read/Write connection
+
+To get the password for "postgres" run:
+
+    export POSTGRES_ADMIN_PASSWORD=$(kubectl get secret --namespace event-system pg-secret -o jsonpath="{.data.postgres-password}" | base64 -d)
+
+To get the password for "user" run:
+
+    export POSTGRES_PASSWORD=$(kubectl get secret --namespace event-system pg-secret -o jsonpath="{.data.password}" | base64 -d)
+
+To connect to your database run the following command:
+
+    kubectl run event-postgres-postgresql-client --rm --tty -i --restart='Never' --namespace event-system --image registry-1.docker.io/bitnami/postgresql:latest \
+      --command -- psql --host event-postgres-postgresql -d notifications -p 5432
+
+    > NOTE: If you access the container using bash, make sure that you execute "/opt/bitnami/scripts/postgresql/entrypoint.sh /bin/bash" in order to avoid the error "psql: local user with ID 1001} does not exist"
+
+To connect to your database from outside the cluster execute the following commands:
+
+    kubectl port-forward --namespace event-system svc/event-postgres-postgresql 5432:5432 &
+    psql --host 127.0.0.1 -d notifications -p 5432
+
+WARNING: The configured password will be ignored on new installation in case when previous PostgreSQL release was deleted through the helm command. In that case, old PVC will have an old password, and setting it through helm won't take effect. Deleting persistent volumes (PVs) will solve the issue.
+WARNING: Rolling tag detected (bitnami/postgresql:latest), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://techdocs.broadcom.com/us/en/vmware-tanzu/application-catalog/tanzu-application-catalog/services/tac-doc/apps-tutorials-understand-rolling-tags-containers-index.html
+WARNING: Rolling tag detected (bitnami/os-shell:latest), please note that it is strongly recommended to avoid using rolling tags in a production environment.
++info https://techdocs.broadcom.com/us/en/vmware-tanzu/application-catalog/tanzu-application-catalog/services/tac-doc/apps-tutorials-understand-rolling-tags-containers-index.html
+
+WARNING: There are "resources" sections in the chart not set. Using "resourcesPreset" is not recommended for production. For production installations, please set the following values according to your workload needs:
+  - primary.resources
+  - readReplicas.resources
++info https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+--set: command not found
+jayaraj@jayaraj-machine:~/Learnings/Proj-2.0-Docker-K8s-Helm$ 
+
+
+jayaraj@jayaraj-machine:~/Learnings/Proj-2.0-Docker-K8s-Helm$ kubectl run psql-test --rm -it --namespace event-system \
+  --image registry-1.docker.io/bitnami/postgresql:latest \
+  -- bash
+If you don't see a command prompt, try pressing enter.
+
+
+postgresql 15:38:54.20 INFO  ==> 
+postgresql 15:38:54.20 INFO  ==> Welcome to the Bitnami postgresql container
+postgresql 15:38:54.20 INFO  ==> Subscribe to project updates by watching https://github.com/bitnami/containers
+postgresql 15:38:54.20 INFO  ==> NOTICE: Starting August 28th, 2025, only a limited subset of images/charts will remain available for free. Backup will be available for some time at the 'Bitnami Legacy' repository. More info at https://github.com/bitnami/containers/issues/83267
+postgresql 15:38:54.21 INFO  ==> 
+
+postgres [ / ]$ 
+postgres [ / ]$ 
+postgres [ / ]$ psql -h event-postgres-postgresql -U user -d notifications
+Password for user user: 
+psql (18.1)
+Type "help" for help.
+
+notifications=> \du
+                             List of roles
+ Role name |                         Attributes                         
+-----------+------------------------------------------------------------
+ postgres  | Superuser, Create role, Create DB, Replication, Bypass RLS
+ user      | Create DB
+
+notifications=> \l
+                                                       List of databases
+     Name      |  Owner   | Encoding | Locale Provider |   Collate   |    Ctype    | Locale | ICU Rules
+ |   Access privileges   
+---------------+----------+----------+-----------------+-------------+-------------+--------+----------
+-+-----------------------
+ notifications | user     | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |        |          
+ | =Tc/user             +
+               |          |          |                 |             |             |        |          
+ | user=CTc/user
+ postgres      | postgres | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |        |          
+ | 
+ template0     | postgres | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |        |          
+ | =c/postgres          +
+               |          |          |                 |             |             |        |          
+ | postgres=CTc/postgres
+ template1     | postgres | UTF8     | libc            | en_US.UTF-8 | en_US.UTF-8 |        |          
+ | =c/postgres          +
+               |          |          |                 |             |             |        |          
+ | postgres=CTc/postgres
+(4 rows)
