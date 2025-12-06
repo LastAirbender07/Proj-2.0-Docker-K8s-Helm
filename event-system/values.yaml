@@ -138,7 +138,8 @@ istio:
       - api.jayaraj.dev
       # - "*"   # default, overridden per environment
     ingressGatewaySelector:
-      istio: ingressgateway # use default istio ingress gateway
+      app: istio-ingressgateway
+
 
   virtualService:
     hosts:

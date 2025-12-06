@@ -16,6 +16,6 @@ spec:
             prefix: "/"
       route:
         - destination:
-            host: {{ include "event-system.fullname" . }}-backend
+            host: {{ include "event-system.fullname" . }}-backend.{{ .Values.namespace }}.svc.cluster.local
             port:
               number: {{ .Values.backend.service.port }}
