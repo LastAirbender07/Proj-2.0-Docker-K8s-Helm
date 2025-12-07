@@ -9,9 +9,23 @@ spec:
   selector:
     {{- toYaml .Values.istio.gateway.ingressGatewaySelector | nindent 4 }}
   servers:
+    # HTTP Server
     - port:
         number: {{ .Values.istio.gateway.port }}
         name: http
         protocol: HTTP
       hosts:
         {{- toYaml .Values.istio.gateway.hosts | nindent 8 }}
+      tls:
+        httpsRedirect: true   # redirect HTTP → HTTPS
+
+    # HTTPS Server
+    - port:
+        number: {{ .Values.istio.gateway.securePort }}
+        name: https
+        protocol: HTTPS
+      hosts:
+        {{- toYaml .Values.istio.gateway.hosts | nindent 8 }}
+      tls:
+        mode: SIMPLE
+        credentialName: {{ .Values.istio.tls.secretName }}

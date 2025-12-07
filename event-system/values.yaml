@@ -134,9 +134,9 @@ istio:
 
   gateway:
     port: 80
+    securePort: 443
     hosts:
       - api.jayaraj.dev
-      # - "*"   # default, overridden per environment
     ingressGatewaySelector:
       app: istio-ingressgateway
 
@@ -147,8 +147,8 @@ istio:
       # - "*"   # same override
 
   tls:
-    enabled: false
-    secretName: ""   # e.g. cert-manager secret
+    enabled: true
+    secretName: istio-tls-secret
 
 
 serviceAccount:
