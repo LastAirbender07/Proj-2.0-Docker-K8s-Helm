@@ -132,6 +132,10 @@ scheduler:
 istio:
   enabled: true
 
+  pilot:
+    enabled: true
+    enableSds: true
+
   gateway:
     port: 80
     securePort: 443
@@ -140,6 +144,10 @@ istio:
     ingressGatewaySelector:
       app: istio-ingressgateway
 
+  gateways:
+    istio-ingressgateway:
+      sds:
+        enabled: true
 
   virtualService:
     hosts:
@@ -148,7 +156,9 @@ istio:
 
   tls:
     enabled: true
-    secretName: istio-tls-secret
+    mode: SIMPLE
+    credentialName: istio-tls-secret
+    httpsRedirect: true
 
 
 serviceAccount:

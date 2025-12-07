@@ -27,5 +27,6 @@ spec:
       hosts:
         {{- toYaml .Values.istio.gateway.hosts | nindent 8 }}
       tls:
-        mode: SIMPLE
-        credentialName: {{ .Values.istio.tls.secretName }}
+        mode: {{ .Values.istio.tls.mode }}
+        credentialName: {{ .Values.istio.tls.credentialName }}
+        
