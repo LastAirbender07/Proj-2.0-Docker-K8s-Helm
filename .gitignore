@@ -2,3 +2,5 @@
 /backend/backend.egg-info
 /backend/build
 __pycache__
+*.crt
+*.key

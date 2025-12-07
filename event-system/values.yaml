@@ -142,7 +142,7 @@ istio:
     hosts:
       - api.jayaraj.dev
     ingressGatewaySelector:
-      app: istio-ingressgateway
+      istio: ingress
 
   gateways:
     istio-ingressgateway:
@@ -157,7 +157,7 @@ istio:
   tls:
     enabled: true
     mode: SIMPLE
-    credentialName: istio-tls-secret
+    credentialName: api-tls-secret
     httpsRedirect: true
 
 

@@ -16,8 +16,8 @@ spec:
         protocol: HTTP
       hosts:
         {{- toYaml .Values.istio.gateway.hosts | nindent 8 }}
-      tls:
-        httpsRedirect: true   # redirect HTTP → HTTPS
+      # tls:
+      #   httpsRedirect: true   # redirect HTTP → HTTPS
 
     # HTTPS Server
     - port:
