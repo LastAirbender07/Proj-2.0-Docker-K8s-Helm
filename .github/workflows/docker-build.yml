@@ -19,7 +19,8 @@ jobs:
 
     outputs:
       new_version: ${{ steps.version.outputs.new_version }}
-      date-time: ${{ steps.update-changelog.outputs.date-time }}
+      current_version: ${{ steps.version.outputs.current_version }}
+      date_time: ${{ steps.update-changelog.outputs.date_time }}
       branch_name: ${{ steps.create-branch.outputs.branch_name }}
 
     steps:
@@ -68,6 +69,7 @@ jobs:
         NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
 
         echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "current_version=$HUB_VERSION" >> $GITHUB_OUTPUT
         echo "🚀 Bumping version to $NEW_VERSION"
         echo "Trying to login to DockerHub..."
         echo "Creds: ${{ secrets.DOCKERHUB_USERNAME }} / ${{ secrets.DOCKERHUB_TOKEN }}"
@@ -116,7 +118,7 @@ jobs:
     - name: Update CHANGELOG
       id: update-changelog
       run: |
-        DATE-TIME=$(date +"%Y%m%d%H%M%S")
+        DATE_TIME=$(date +"%Y%m%d%H%M%S")
         VERSION=${{ steps.version.outputs.new_version }}
 
         if [ ! -f "${CHANGELOG}" ]; then
@@ -125,7 +127,7 @@ jobs:
         fi
 
         {
-          echo "## $VERSION — $DATE-TIME"
+          echo "## $VERSION — $DATE_TIME"
           echo "- Auto-build by CI-CD pipeline"
           echo "- Updated backend/worker/scheduler image to $VERSION"
           echo "- Docker image pushed: ${IMAGE_NAME}:$VERSION"
@@ -133,7 +135,7 @@ jobs:
           echo ""
         } >> ${CHANGELOG}
 
-        echo "date-time=$DATE-TIME" >> $GITHUB_OUTPUT
+        echo "date_time=$DATE_TIME" >> $GITHUB_OUTPUT
 
     - name: Create release branch
       id: create-branch
@@ -141,7 +143,7 @@ jobs:
         git config user.name "github-actions"
         git config user.email "actions@github.com"
 
-        DATE=${{ steps.update-changelog.outputs.date-time }}
+        DATE=${{ steps.update-changelog.outputs.date_time }}
         BRANCH_NAME="release-${{ steps.version.outputs.new_version }}-${DATE}"
         git checkout -b $BRANCH_NAME
 
@@ -150,17 +152,17 @@ jobs:
 
         git push origin $BRANCH_NAME
 
-        echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v6
       with:
-        title: "Release ${{ steps.version.outputs.new_version }}-${{ steps.update-changelog.outputs.date-time }}"
+        title: "Release ${{ steps.version.outputs.new_version }}-${{ steps.update-changelog.outputs.date_time }}"
         body: |
           ## Release Summary
           
           **Version:** ${{ steps.version.outputs.new_version }}
-          **Build Date:** ${{ steps.update-changelog.outputs.date-time }}
+          **Build Date:** ${{ steps.update-changelog.outputs.date_time }}
           
           ### Changes
           - Updated backend/worker/scheduler images to `${{ steps.version.outputs.new_version }}`
