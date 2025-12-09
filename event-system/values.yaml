@@ -1,19 +1,15 @@
 namespace: event-system
-
-
 image:
   backend:
     repository: jayaraj0781/event-backend
-    tag: "v1.0.0"
+    tag: "v1.0.5"
   worker:
     repository: jayaraj0781/event-backend
-    tag: "v1.0.0"
+    tag: "v1.0.5"
   scheduler:
     repository: jayaraj0781/event-backend
-    tag: "v1.0.0"
+    tag: "v1.0.5"
   pullPolicy: Always
-
-
 env:
   # database
   POSTGRES_USER:
@@ -26,21 +22,16 @@ env:
       secretKeyRef:
         name: pg-secret
         key: password
-
-
   POSTGRES_DB: "notifications"
   POSTGRES_HOST: "event-postgres-postgresql"
   POSTGRES_PORT: "5432"
-
   # redis
   REDIS_HOST: "event-redis-master"
   REDIS_PORT: "6379"
   REDIS_DB: "0"
-
   # rq
   RQ_QUEUE: "default"
   RQ_RETRIES: "3"
-
   # smtp (password should be a secret)
   SMTP_HOST: "smtp.gmail.com"
   SMTP_PORT: "587"
@@ -48,12 +39,9 @@ env:
   SMTP_PASSWORD: "securepassword"
   SMTP_USE_SSL: "false"
   FROM_EMAIL: "no-reply@example.com"
-
-
 backend:
   replicaCount: 1
   port: 5001
-
   command:
     - "/app/.venv/bin/uvicorn"
   args:
@@ -62,7 +50,6 @@ backend:
     - "0.0.0.0"
     - "--port"
     - "5001"
-
   livenessProbe:
     httpGet:
       path: /health
@@ -72,7 +59,6 @@ backend:
     timeoutSeconds: 2
     failureThreshold: 3
     successThreshold: 1
-
   readinessProbe:
     httpGet:
       path: /health
@@ -82,12 +68,10 @@ backend:
     timeoutSeconds: 2
     failureThreshold: 3
     successThreshold: 1
-
   service:
     type: ClusterIP
     port: 5001
     annotations: {}
-
   resources:
     limits:
       cpu: 500m
@@ -95,15 +79,11 @@ backend:
     requests:
       cpu: 250m
       memory: 256Mi
-
-
 worker:
   replicaCount: 1
-
   service:
     type: ClusterIP
     port: 5001
-
   resources:
     limits:
       cpu: 300m
@@ -111,15 +91,11 @@ worker:
     requests:
       cpu: 150m
       memory: 128Mi
-
-
 scheduler:
   replicaCount: 1
-
   service:
     type: ClusterIP
     port: 5001
-
   resources:
     limits:
       cpu: 200m
@@ -127,15 +103,11 @@ scheduler:
     requests:
       cpu: 100m
       memory: 128Mi
-
-
 istio:
   enabled: true
-
   pilot:
     enabled: true
     enableSds: true
-
   gateway:
     port: 80
     securePort: 443
@@ -143,32 +115,24 @@ istio:
       - api.jayaraj.dev
     ingressGatewaySelector:
       istio: ingress
-
   gateways:
     istio-ingressgateway:
       sds:
         enabled: true
-
   virtualService:
     hosts:
       - api.jayaraj.dev
       # - "*"   # same override
-
   tls:
     enabled: true
     mode: SIMPLE
     credentialName: api-tls-secret
     httpsRedirect: true
-
-
 serviceAccount:
   create: false
   annotations: {}
   automount: true
-
 httpRoute:
   enabled: false
-
 ingress:
   enabled: false
-  
