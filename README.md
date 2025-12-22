@@ -26,8 +26,9 @@ Proj-2.0-Docker-K8s-Helm % mv api.jayaraj.dev.pem cert.crt
 Proj-2.0-Docker-K8s-Helm % mv api.jayaraj.dev-key.pem cert.key
 
 <!-- Install Istio -->
-helm install istio-base istio/base -n istio-system --set defaultRevision=default --create-namespace
+Proj-2.0-Docker-K8s-Helm % helm install istio-base istio/base -n istio-system --set defaultRevision=default --create-namespace
 
+```
 NAME: istio-base
 LAST DEPLOYED: Sun Dec 21 19:42:36 2025
 NAMESPACE: istio-system
@@ -41,7 +42,11 @@ To learn more about the release, try:
   $ helm status istio-base -n istio-system
   $ helm get all istio-base -n istio-system
 
+```
+
 Proj-2.0-Docker-K8s-Helm % helm install istiod istio/istiod -n istio-system --wait
+
+```
 NAME: istiod
 LAST DEPLOYED: Sun Dec 21 19:43:11 2025
 NAMESPACE: istio-system
@@ -72,9 +77,12 @@ NAME            NAMESPACE       REVISION        UPDATED                         
 istio-base      istio-system    1               2025-12-21 19:42:36.554245 +0530 IST    deployed        base-1.28.1     1.28.1     
 istiod          istio-system    1               2025-12-21 19:43:11.914933 +0530 IST    deployed        istiod-1.28.1   1.28.1     
 Proj-2.0-Docker-K8s-Helm % 
+```
 
 
-i750332@GR2F96R7YN Proj-2.0-Docker-K8s-Helm % helm install istio-ingress istio/gateway -n event-system                 
+Proj-2.0-Docker-K8s-Helm % helm install istio-ingress istio/gateway -n event-system   
+
+```
 NAME: istio-ingress
 LAST DEPLOYED: Sun Dec 21 19:45:17 2025
 NAMESPACE: event-system
@@ -91,7 +99,8 @@ To learn more about the release, try:
 Next steps:
   * Deploy an HTTP Gateway: https://istio.io/latest/docs/tasks/traffic-management/ingress/ingress-control/
   * Deploy an HTTPS Gateway: https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/
-i750332@GR2F96R7YN Proj-2.0-Docker-K8s-Helm % 
+Proj-2.0-Docker-K8s-Helm % 
+```
 
 
 Proj-2.0-Docker-K8s-Helm % kubectl create secret tls api-tls-secret -n event-system --cert=cert.crt --key=cert.key 
@@ -99,9 +108,9 @@ secret/api-tls-secret created
 
 <!-- Install postgress and redis -->
 
-kubectl create secret generic pg-secret -n event-system  --from-literal=username=user --from-literal=password=supersecretpassword --from-literal=postgres-password=supersecretpassword --from-literal=database=notifications
+Proj-2.0-Docker-K8s-Helm % kubectl create secret generic pg-secret -n event-system  --from-literal=username=user --from-literal=password=supersecretpassword --from-literal=postgres-password=supersecretpassword --from-literal=database=notifications
 
-helm install event-postgres bitnami/postgresql \
+Proj-2.0-Docker-K8s-Helm % helm install event-postgres bitnami/postgresql \
   --namespace event-system \
   --set auth.existingSecret=pg-secret \
   --set auth.username=user \
@@ -111,16 +120,8 @@ helm install event-postgres bitnami/postgresql \
   --set volumePermissions.enabled=true \
   --set persistence.size=1Gi
 
-<!-- helm install event-postgres bitnami/postgresql \
-  --namespace event-system \
-  --set auth.username=user \
-  --set auth.password=supersecretpassword \
-  --set auth.database=notifications \
-  --set volumePermissions.enabled=true \
-  --set persistence.size=1Gi -->
 
-
-helm install event-redis bitnami/redis \
+Proj-2.0-Docker-K8s-Helm %  helm install event-redis bitnami/redis \
 -n event-system \
 --set architecture=standalone \
 --set auth.enabled=false \
@@ -130,17 +131,19 @@ helm install event-redis bitnami/redis \
 <!-- check password and db name -->
 i750332@GR2F96R7YN Proj-2.0-Docker-K8s-Helm % kubectl get secret --namespace event-system pg-secret -o jsonpath="{.data.postgres-password}" | base64 -d; echo
 supersecretpassword
+
 i750332@GR2F96R7YN Proj-2.0-Docker-K8s-Helm % kubectl get secret --namespace event-system pg-secret -o jsonpath="{.data.password}" | base64 -d; echo
 supersecretpassword
 
 
-kubectl run psql-test --rm -it --namespace event-system --image registry-1.docker.io/bitnami/postgresql:latest -- bash
+Proj-2.0-Docker-K8s-Helm % kubectl run psql-test --rm -it --namespace event-system --image registry-1.docker.io/bitnami/postgresql:latest -- bash
 
 in the terminal run below command to connect to the db
 /opt/bitnami/scripts/postgresql/entrypoint.sh /bin/bash
 
 <!-- Install event-system -->
-Proj-2.0-Docker-K8s-Helm % helm install event-system event-system/. -n event-system 
+Proj-2.0-Docker-K8s-Helm % helm upgrade --install event-system event-system/. -n event-system
+
 NAME: event-system
 LAST DEPLOYED: Sun Dec 21 19:56:09 2025
 NAMESPACE: event-system
@@ -150,6 +153,7 @@ TEST SUITE: None
 
 <!-- Install prometheus + grafana -->
 Proj-2.0-Docker-K8s-Helm % helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack -n monitoring
+
 psql -h event-postgres-postgresql -U user -d notifications
 
 ```
@@ -177,16 +181,10 @@ Get your grafana admin user password by running:
 
 
 Visit https://github.com/prometheus-operator/kube-prometheus for instructions on how to create & configure Alertmanager and Prometheus instances using the Operator.
-
 ```
 
-Proj-2.0-Docker-K8s-Helm % kubectl get pods -n monitoring
-NAME                                                       READY   STATUS              RESTARTS   AGE
-kube-prometheus-stack-grafana-59b75df58c-k9mmp             0/3     ContainerCreating   0          107s
-kube-prometheus-stack-kube-state-metrics-669dcf4b9-pr9np   1/1     Running             0          107s
-kube-prometheus-stack-operator-6b677dd94f-b9dnt            0/1     ImagePullBackOff    0          107s
-kube-prometheus-stack-prometheus-node-exporter-vgxf8       0/1     ImagePullBackOff    0          107s
-Proj-2.0-Docker-K8s-Helm % kubectl get pods -n monitoring
+```
+Proj-2.0-Docker-K8s-Helm % kubectl get all -n monitoring
 NAME                                                       READY   STATUS            RESTARTS   AGE
 alertmanager-kube-prometheus-stack-alertmanager-0          2/2     Running           0          50s
 kube-prometheus-stack-grafana-59b75df58c-k9mmp             3/3     Running           0          2m58s
@@ -239,4 +237,8 @@ NAME                                                               READY   AGE
 statefulset.apps/alertmanager-kube-prometheus-stack-alertmanager   1/1     2m42s
 statefulset.apps/prometheus-kube-prometheus-stack-prometheus       1/1     2m42s
 
-kubectl port-forward svc/kube-prometheus-stack-grafana -n monitoring 3000:80 
+```
+
+Proj-2.0-Docker-K8s-Helm % kubectl port-forward svc/kube-prometheus-stack-grafana -n monitoring 3000:80 
+
+
