@@ -11,3 +11,9 @@
 - Docker image pushed: jayaraj0781/event-backend:v1.0.6
 - Updated Helm values.yaml with the new tag.
 
+## v1.0.7 — 20251222134810
+- Auto-build by CI-CD pipeline
+- Updated backend/worker/scheduler image to v1.0.7
+- Docker image pushed: jayaraj0781/event-backend:v1.0.7
+- Updated Helm values.yaml with the new tag.
+
