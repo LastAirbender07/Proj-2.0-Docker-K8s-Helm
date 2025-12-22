@@ -2,9 +2,10 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ include "event-system.fullname" . }}-backend
+  name: {{ include "event-system.fullname" . }}-backend-service-monitor
   namespace: {{ .Values.backend.serviceMonitor.namespace }}
   labels:
+    release: {{ .Values.backend.serviceMonitor.release }}
     {{- include "event-system.labels" . | nindent 4 }}
 spec:
   selector:

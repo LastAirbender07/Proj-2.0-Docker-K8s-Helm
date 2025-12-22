@@ -81,6 +81,7 @@ backend:
       memory: 256Mi
   serviceMonitor:
     enabled: true
+    release: kube-prometheus-stack
     namespace: monitoring
     path: /metrics
     interval: 15s
