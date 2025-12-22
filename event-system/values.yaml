@@ -79,6 +79,11 @@ backend:
     requests:
       cpu: 250m
       memory: 256Mi
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring
+    path: /metrics
+    interval: 15s
 worker:
   replicaCount: 1
   service:
