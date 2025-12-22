@@ -2,13 +2,13 @@ namespace: event-system
 image:
   backend:
     repository: jayaraj0781/event-backend
-    tag: "v1.0.5"
+    tag: "v1.0.6"
   worker:
     repository: jayaraj0781/event-backend
-    tag: "v1.0.5"
+    tag: "v1.0.6"
   scheduler:
     repository: jayaraj0781/event-backend
-    tag: "v1.0.5"
+    tag: "v1.0.6"
   pullPolicy: Always
 env:
   # database
