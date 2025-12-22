@@ -9,8 +9,10 @@ import logging
 import time
 import psycopg2
 import glob
-from subprocess import run, CalledProcessError
+from subprocess import run
 from psycopg2 import OperationalError
+from prometheus_fastapi_instrumentator import Instrumentator
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -118,6 +120,16 @@ def run_migrations():
         raise
 
 app = FastAPI(title="Event Notification Service")
+
+Instrumentator(
+    should_ignore_untemplated=True,
+    should_group_status_codes=False,
+).instrument(app).expose(
+    app,
+    endpoint="/metrics",
+    include_in_schema=False,
+)
+
 
 # --- CORS ---
 origins = [

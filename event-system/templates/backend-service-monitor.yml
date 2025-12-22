@@ -1,0 +1,20 @@
+{{- if .Values.backend.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "event-system.fullname" . }}-backend
+  namespace: {{ .Values.backend.serviceMonitor.namespace }}
+  labels:
+    {{- include "event-system.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "event-system.selectorLabels" . | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.namespace }}
+  endpoints:
+    - port: http
+      path: {{ .Values.backend.serviceMonitor.path }}
+      interval: {{ .Values.backend.serviceMonitor.interval }}
+{{- end }}
