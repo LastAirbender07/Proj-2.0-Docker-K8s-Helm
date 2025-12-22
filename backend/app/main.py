@@ -70,10 +70,17 @@ def run_migrations():
         )
         cur = conn.cursor()
 
-        cur.execute("""SELECT version_num FROM alembic_version LIMIT 1;""")
-        row = cur.fetchone()
-
-        db_revision = row[0] if row else None
+        try:
+            cur.execute("""SELECT version_num FROM alembic_version LIMIT 1;""")
+            row = cur.fetchone()
+            db_revision = row[0] if row else None
+        except Exception as e:
+            # Handle missing alembic_version table
+            if getattr(e, 'pgcode', None) == '42P01' or 'UndefinedTable' in str(type(e)):
+                logger.warning("alembic_version table does not exist yet.")
+                db_revision = None
+            else:
+                raise
         logger.info(f"DB Alembic Revision: {db_revision}")
 
         alembic_bin = "/app/.venv/bin/alembic"
