@@ -97,7 +97,7 @@ spec:
     spec:
       containers:
         - name: event-system-backend
-          image: "jayaraj0781/event-backend:v1.0.0"
+          image: "jayaraj0781/event-backend:v1.0.7"
           imagePullPolicy: Always
 
           ports:
@@ -116,14 +116,16 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: pg-secret
-                  key: app-password
+                  key: password
             - name: POSTGRES_PORT
               value: "5432"
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: pg-secret
-                  key: app-username
+                  key: username
+            - name: REDIS_DB
+              value: "0"
             - name: REDIS_HOST
               value: "event-redis-master"
             - name: REDIS_PORT
@@ -202,7 +204,7 @@ spec:
     spec:
       containers:
         - name: event-system-scheduler
-          image: "jayaraj0781/event-backend:v1.0.0"
+          image: "jayaraj0781/event-backend:v1.0.7"
           imagePullPolicy: Always
 
           # Scheduler has no ports
@@ -220,14 +222,16 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: pg-secret
-                  key: app-password
+                  key: password
             - name: POSTGRES_PORT
               value: "5432"
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: pg-secret
-                  key: app-username
+                  key: username
+            - name: REDIS_DB
+              value: "0"
             - name: REDIS_HOST
               value: "event-redis-master"
             - name: REDIS_PORT
@@ -291,7 +295,7 @@ spec:
     spec:
       containers:
         - name: event-system-worker
-          image: "jayaraj0781/event-backend:v1.0.0"
+          image: "jayaraj0781/event-backend:v1.0.7"
           imagePullPolicy: Always
 
           # Worker has no ports
@@ -309,14 +313,16 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: pg-secret
-                  key: app-password
+                  key: password
             - name: POSTGRES_PORT
               value: "5432"
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: pg-secret
-                  key: app-username
+                  key: username
+            - name: REDIS_DB
+              value: "0"
             - name: REDIS_HOST
               value: "event-redis-master"
             - name: REDIS_PORT
@@ -363,14 +369,54 @@ metadata:
     app.kubernetes.io/managed-by: Helm
 spec:
   selector:
-    istio: ingressgateway
+    istio: ingress
   servers:
+    # HTTP Server
     - port:
         number: 80
         name: http
         protocol: HTTP
       hosts:
         - api.jayaraj.dev
+      # tls:
+      #   httpsRedirect: true   # redirect HTTP → HTTPS
+
+    # HTTPS Server
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts:
+        - api.jayaraj.dev
+      tls:
+        mode: SIMPLE
+        credentialName: api-tls-secret
+---
+# Source: event-system/templates/backend-service-monitor.yml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: event-system-backend-service-monitor
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+    helm.sh/chart: event-system-0.1.0
+    app.kubernetes.io/name: event-system
+    app.kubernetes.io/instance: event-system
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: event-system
+      app.kubernetes.io/instance: event-system
+  namespaceSelector:
+    matchNames:
+      - event-system
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
 ---
 # Source: event-system/templates/istio-virtualservice-backend.yml
 apiVersion: networking.istio.io/v1beta1
@@ -395,6 +441,6 @@ spec:
             prefix: "/"
       route:
         - destination:
-            host: event-system-backend
+            host: event-system-backend.event-system.svc.cluster.local
             port:
               number: 5001
